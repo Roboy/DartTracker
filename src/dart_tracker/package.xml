@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package>
+    <name>dart_tracker</name>
+    <version>0.0.0</version>
+    <description>dart tracker rviz panel</description>
+    <maintainer email="simon.trendel@tum.de">Simon Trendel</maintainer>
+    <license>BSD</license>
+
+    <buildtool_depend>catkin</buildtool_depend>
+    <build_depend>roscpp</build_depend>
+    <build_depend>std_msgs</build_depend>
+    <build_depend>rviz</build_depend>
+    <build_depend>visualization_msgs</build_depend>
+    <build_depend>tf</build_depend>
+    <build_depend>pluginlib</build_depend>
+    <build_depend>dart</build_depend>
+    <run_depend>roscpp</run_depend>
+    <run_depend>std_msgs</run_depend>
+    <run_depend>message_runtime</run_depend>
+    <run_depend>visualization_msgs</run_depend>
+    <run_depend>tf</run_depend>
+    <run_depend>rviz</run_depend>
+    <run_depend>pluginlib</run_depend>
+    <run_depend>dart</run_depend>
+
+    <export>
+        <rviz plugin="${prefix}/dart_tracker.xml"/>
+    </export>
+</package>

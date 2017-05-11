@@ -1,0 +1,9 @@
+<library path="libdart_tracker">
+  <class name="DartTracker"
+         type="DartTracker"
+         base_class_type="rviz::Panel">
+    <description>
+      A panel widget for dart tracking
+    </description>
+  </class>
+</library>
