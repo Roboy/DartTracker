@@ -29,7 +29,6 @@
 #include <cuda_runtime.h>
 #include <vector_types.h>
 
-#include "depth_sources/image_depth_source.h"
 #include "geometry/plane_fitting.h"
 #include "img_proc/img_ops.h"
 #include "optimization/priors.h"
@@ -57,6 +56,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include "dart_tracker/dartRealSense.hpp"
 
 #endif
 
@@ -122,4 +122,5 @@ private:
     dart::Tracker *tracker;
     dart::ParamMapPoseReduction *poseReduction;
     float defaultModelSdfPadding = 0.07;
+    DartRealSense<ushort,uchar3> realsense;
 };

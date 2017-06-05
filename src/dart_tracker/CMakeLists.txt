@@ -33,6 +33,8 @@ pkg_check_modules(matheval REQUIRED libmatheval)
 
 find_package(GLEW REQUIRED)
 
+find_package(librealsense REQUIRED)
+
 include_directories(
    include
    ${catkin_INCLUDE_DIRS}
@@ -61,4 +63,4 @@ link_directories( ${CUDA_TOOLKIT_ROOT_DIR}/lib64/)
 
 qt5_wrap_cpp(MOC_FILES include/dart_tracker/dartTracker.hpp )
 cuda_add_library(  dart_tracker src/dartTracker.cpp ${MOC_FILES} )
-target_link_libraries( dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES}  )
+target_link_libraries( dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES})
