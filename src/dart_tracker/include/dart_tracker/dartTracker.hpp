@@ -49,6 +49,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <visualization_msgs/Marker.h>
 #include <std_srvs/SetBool.h>
+#include <sensor_msgs/Image.h>
 
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
@@ -57,6 +58,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include "dart_tracker/dartRealSense.hpp"
+#include <thread>
 
 #endif
 
@@ -116,6 +118,8 @@ public:
      */
     virtual void save(rviz::Config config) const{};
 
+    void realsensePub();
+
 private:
     ros::NodeHandlePtr nh;
     boost::shared_ptr<ros::AsyncSpinner> spinner;
@@ -123,4 +127,8 @@ private:
     dart::ParamMapPoseReduction *poseReduction;
     float defaultModelSdfPadding = 0.07;
     DartRealSense<ushort,uchar3> realsense;
+
+    std::thread *realsense_thread;
+    bool realsensePubRunner;
+    ros::Publisher realsense_pub;
 };
