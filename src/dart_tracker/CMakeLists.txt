@@ -5,7 +5,7 @@ if( NOT CMAKE_BUILD_TYPE )
    set( CMAKE_BUILD_TYPE Release )
 endif()
 
-add_definitions(-std=c++11 -g)
+add_definitions(-std=c++11 -g -fPIC)
 
 
 #==============================================================================
