@@ -11,8 +11,9 @@ add_definitions(-std=c++11 -g)
 #==============================================================================
 # Dependencies
 #==============================================================================
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs sensor_msgs message_generation rviz tf tf_conversions visualization_msgs dart )
-catkin_package(CATKIN_DEPENDS message_runtime dart sensor_msgs )
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs sensor_msgs message_generation rviz tf
+        tf_conversions visualization_msgs dart pcl_ros cv_bridge)
+catkin_package(CATKIN_DEPENDS message_runtime dart sensor_msgs pcl_ros cv_bridge )
 
 # Qt5
 # Find includes in corresponding build directories

@@ -50,20 +50,25 @@
 #include <visualization_msgs/Marker.h>
 #include <std_srvs/SetBool.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
 
 #include <tf/tf.h>
-#include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
 #include <tf_conversions/tf_eigen.h>
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include "dart_tracker/dartRealSense.hpp"
 #include <thread>
+#include <opencv2/core/core.hpp>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/highgui/highgui.hpp>
 
 #endif
 
 using namespace std;
 using namespace Eigen;
+using namespace cv;
 
 #define EIGEN_DONT_ALIGN
 
@@ -120,15 +125,22 @@ public:
 
     void realsensePub();
 
+    void transformPublisher();
+
+    void publishDepthPointCloud();
+
 private:
     ros::NodeHandlePtr nh;
     boost::shared_ptr<ros::AsyncSpinner> spinner;
     dart::Tracker *tracker;
     dart::ParamMapPoseReduction *poseReduction;
     float defaultModelSdfPadding = 0.07;
-    DartRealSense<ushort,uchar3> realsense;
+    DartRealSense<uint16_t,uchar3> realsense;
 
-    std::thread *realsense_thread;
-    bool realsensePubRunner;
-    ros::Publisher realsense_pub;
+    boost::shared_ptr<std::thread> realsense_thread, transform_thread;
+    bool realsensePubRunner = true, publish_transform = true;
+    ros::Publisher realsense_image_pub, realsense_depth_pub;
+    tf::TransformBroadcaster tf_broadcaster;
+    tf::Transform realsense_tf;
+    PointCloudRGB::Ptr pointcloud;
 };
