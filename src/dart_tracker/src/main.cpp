@@ -1,24 +1,26 @@
 #include "dart_tracker/dartTracker.hpp"
 
-DartTracker::DartTracker(){
+int main(int argc, char *argv[]){
     if (!ros::isInitialized()) {
         int argc = 0;
         char *argv = nullptr;
-        ros::init(argc, &argv, "roboy_managing_node",
+        ros::init(argc, &argv, "roboy_dart_tracker",
                   ros::init_options::AnonymousName |
                   ros::init_options::NoRosout);
     }
-    nh = ros::NodeHandlePtr(new ros::NodeHandle);
+    ros::NodeHandlePtr nh = ros::NodeHandlePtr(new ros::NodeHandle);
 
-    realsense_image_pub = nh->advertise<sensor_msgs::Image>("/DartTracker/realsense_color", 1);
-    realsense_depth_pub = nh->advertise<PointCloud>("/DartTracker/realsense_depth", 1);
+    ros::Publisher realsense_image_pub = nh->advertise<sensor_msgs::Image>("/DartTracker/realsense_color", 1);
+    ros::Publisher realsense_depth_pub = nh->advertise<PointCloud>("/DartTracker/realsense_depth", 1);
 
-    spinner = boost::shared_ptr<ros::AsyncSpinner>(new ros::AsyncSpinner(1));
+    boost::shared_ptr<ros::AsyncSpinner> spinner = boost::shared_ptr<ros::AsyncSpinner>(new ros::AsyncSpinner(1));
     spinner->start();
 
     cudaSetDevice(0);
     cudaDeviceReset();
-    tracker = new dart::Tracker;
+    glewInit();
+
+    dart::Tracker *tracker = new dart::Tracker;
 
     const static int obsSdfSize = 64;
     const static float obsSdfResolution = 0.01*32/obsSdfSize;
@@ -26,9 +28,12 @@ DartTracker::DartTracker(){
     const static float3 obsSdfOffset = make_float3(0,0,0.1);
 
     tracker->addModel("/home/roboy/workspace/DartTracker/src/dart_tracker/models/testModel/shank.xml",
-                                       0.5*defaultModelSdfResolution,
-                                       0.5*0.5*defaultModelSdfResolution,
-                                       64);
+                      0.5*defaultModelSdfResolution,
+                      0.5*0.5*defaultModelSdfResolution,
+                      64);
+
+
+    DartRealSense<uint16_t,uchar3> realsense;
 
     tracker->addDepthSource(&realsense);
 
@@ -152,79 +157,5 @@ DartTracker::DartTracker(){
 //    realsense_thread = boost::shared_ptr<std::thread>(new std::thread(&DartTracker::realsensePub, this));
 //    realsense_thread->detach();
 
-    publish_transform = true;
-    if(transform_thread==nullptr){
-        transform_thread = boost::shared_ptr<std::thread>(new std::thread(&DartTracker::transformPublisher, this));
-        transform_thread->detach();
-    }
-
-    // initialize realsense pose
-    realsense_tf.setOrigin(tf::Vector3(0, 0, 2.0));
-    tf::Quaternion quat;
-    quat.setRPY(M_PI / 2, 0, 0);
-    realsense_tf.setRotation(quat);
-
-    pointcloud = PointCloudRGB::Ptr(new PointCloudRGB);
+    return 0;
 }
-
-DartTracker::~DartTracker(){
-    realsensePubRunner = false;
-    if(realsense_thread->joinable())
-        realsense_thread->join();
-    publish_transform = false;
-    if(transform_thread->joinable())
-        transform_thread->join();
-}
-
-
-
-void DartTracker::realsensePub() {
-    ros::Rate rate(30);
-
-    while(realsensePubRunner){
-        realsense.advance();
-
-        publishDepthPointCloud();
-
-        rate.sleep();
-
-        Mat image = Mat(480, 640, CV_8UC3, (uint8_t*)realsense.color_frame);
-        imshow("camera", image);
-        waitKey(1);
-//        cv_bridge::CvImage cvImage;
-//        image.copyTo(cvImage.image);
-//        sensor_msgs::Image msg;
-//        cvImage.toImageMsg(msg);
-//        msg.header.frame_id = "real_sense";
-//        // Publish timestamp to synchronize frames.
-//        msg.header.stamp = ros::Time::now();
-//        msg.width = realsense.getColorWidth();
-//        msg.height = realsense.getColorHeight();
-//        msg.is_bigendian = false;
-//        msg.step = sizeof(unsigned char) * 3 * msg.width;
-//        realsense_image_pub.publish(msg);
-        rate.sleep();
-    }
-}
-
-void DartTracker::transformPublisher(){
-    ros::Rate rate(5);
-    while(publish_transform){
-        tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
-        rate.sleep();
-    }
-}
-
-
-void DartTracker::publishDepthPointCloud(){
-    static uint seq = 0;
-    realsense.generatePointCloud(pointcloud);
-    sensor_msgs::PointCloud2 pointcloud_msg;
-    pcl::toROSMsg(*pointcloud,pointcloud_msg);
-    pointcloud_msg.header.frame_id = "real_sense";
-    pointcloud_msg.header.seq = seq++;
-    pointcloud_msg.header.stamp = ros::Time::now();
-    realsense_depth_pub.publish(pointcloud_msg);
-}
-
-PLUGINLIB_EXPORT_CLASS(DartTracker, rviz::Panel)
