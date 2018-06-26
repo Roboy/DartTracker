@@ -1,9 +1,7 @@
 project(dart_tracker)
 cmake_minimum_required(VERSION 2.8)
 
-if( NOT CMAKE_BUILD_TYPE )
-   set( CMAKE_BUILD_TYPE Release )
-endif()
+set( CMAKE_BUILD_TYPE Debug )
 
 add_definitions(-std=c++11 -g -fPIC)
 
@@ -13,7 +11,7 @@ add_definitions(-std=c++11 -g -fPIC)
 #==============================================================================
 find_package(catkin REQUIRED COMPONENTS roscpp std_msgs sensor_msgs message_generation rviz tf
         tf_conversions visualization_msgs dart pcl_ros cv_bridge)
-catkin_package(CATKIN_DEPENDS message_runtime dart sensor_msgs pcl_ros cv_bridge )
+catkin_package(CATKIN_DEPENDS message_runtime dart sensor_msgs pcl_ros cv_bridge)
 
 # Qt5
 # Find includes in corresponding build directories
@@ -24,8 +22,15 @@ find_package(Qt5 REQUIRED COMPONENTS Widgets Core Gui)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../dart/CMakeModules/")
 
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-8.0" )
 # find packages with modules
 find_package(CUDA REQUIRED)
+
+find_package(OpenCV REQUIRED
+        COMPONENTS
+        opencv_highgui
+        CONFIG
+        )
 
 # find packages with pkg-config
 find_package(PkgConfig)
@@ -64,7 +69,7 @@ link_directories( ${CUDA_TOOLKIT_ROOT_DIR}/lib64/)
 
 qt5_wrap_cpp(MOC_FILES include/dart_tracker/dartTracker.hpp )
 cuda_add_library(  dart_tracker src/dartTracker.cpp ${MOC_FILES} )
-target_link_libraries( dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES})
+target_link_libraries( dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES} ${OpenCV_LIBRARIES})
 
 cuda_add_executable(  roboy_dart_tracker src/main.cpp )
-target_link_libraries( roboy_dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES})
+target_link_libraries( roboy_dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES} ${OpenCV_LIBRARIES})

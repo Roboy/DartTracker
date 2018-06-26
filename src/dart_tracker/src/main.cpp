@@ -1,4 +1,5 @@
 #include "dart_tracker/dartTracker.hpp"
+#include <GL/glx.h>
 
 int main(int argc, char *argv[]){
     if (!ros::isInitialized()) {
@@ -18,7 +19,11 @@ int main(int argc, char *argv[]){
 
     cudaSetDevice(0);
     cudaDeviceReset();
+    glutInit(&argc, argv);
+    glutCreateWindow("GLUT");
+
     glewInit();
+    printf("OpenGL version supported by this platform (%s): \n", glGetString(GL_VERSION));
 
     dart::Tracker *tracker = new dart::Tracker;
 
@@ -80,7 +85,32 @@ int main(int argc, char *argv[]){
     float lambdaContact = 0;
     float planeOffset = -0.05f;
 
+    PointCloudRGB::Ptr pointcloud = PointCloudRGB::Ptr(new PointCloudRGB);
+    tf::TransformBroadcaster tf_broadcaster;
+    tf::Transform realsense_tf;
+    realsense_tf.setOrigin(tf::Vector3(0, 0, 2.0));
+    tf::Quaternion quat;
+    quat.setRPY(M_PI / 2, 0, 0);
+    realsense_tf.setRotation(quat);
+
     while(ros::ok()) {
+        realsense.advance();
+
+        Mat image = Mat(480, 640, CV_8UC3, (uint8_t*)realsense.color_frame);
+        imshow("camera", image);
+        waitKey(1);
+
+
+        static uint seq = 0;
+        realsense.generatePointCloud(pointcloud);
+        sensor_msgs::PointCloud2 pointcloud_msg;
+        pcl::toROSMsg(*pointcloud,pointcloud_msg);
+        pointcloud_msg.header.frame_id = "real_sense";
+        pointcloud_msg.header.seq = seq++;
+        pointcloud_msg.header.stamp = ros::Time::now();
+        realsense_depth_pub.publish(pointcloud_msg);
+
+        tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
 
         opts.lambdaIntersection[0 + 3*0] = lambdaIntersection; // right
         opts.lambdaIntersection[2 + 3*2] = lambdaIntersection; // left
