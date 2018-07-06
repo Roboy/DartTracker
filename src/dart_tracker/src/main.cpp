@@ -2,6 +2,7 @@
 #include <GL/glx.h>
 
 int main(int argc, char *argv[]){
+    /* ROS setup */
     if (!ros::isInitialized()) {
         int argc = 0;
         char *argv = nullptr;
@@ -17,6 +18,7 @@ int main(int argc, char *argv[]){
     boost::shared_ptr<ros::AsyncSpinner> spinner = boost::shared_ptr<ros::AsyncSpinner>(new ros::AsyncSpinner(1));
     spinner->start();
 
+    /*For use of OpenGL / GPU*/
     cudaSetDevice(0);
     cudaDeviceReset();
     glutInit(&argc, argv);
@@ -25,6 +27,7 @@ int main(int argc, char *argv[]){
     glewInit();
     printf("OpenGL version supported by this platform (%s): \n", glGetString(GL_VERSION));
 
+    /*Setup of Dart tracker, models and depthimage source*/
     dart::Tracker *tracker = new dart::Tracker;
 
     const static int obsSdfSize = 64;
@@ -37,7 +40,7 @@ int main(int argc, char *argv[]){
                       0.5*0.5*defaultModelSdfResolution,
                       64);
 
-
+    // Depth image source
     DartRealSense<uint16_t,uchar3> realsense;
 
     tracker->addDepthSource(&realsense);
@@ -59,6 +62,7 @@ int main(int argc, char *argv[]){
     }
     allSdfColors.syncHostToDevice();
 
+    /*Some vars (?)*/
     float maxRotationDamping = 200;
     float maxTranslationDamping = 10;
     float infoAccumulationRate = 0.8;
@@ -93,6 +97,7 @@ int main(int argc, char *argv[]){
     quat.setRPY(M_PI / 2, 0, 0);
     realsense_tf.setRotation(quat);
 
+    /*Main loop - only works while connection to roscore*/
     while(ros::ok()) {
         realsense.advance();
 
@@ -100,7 +105,7 @@ int main(int argc, char *argv[]){
         imshow("camera", image);
         waitKey(1);
 
-
+        /*Get and publish point cloud*/
         static uint seq = 0;
         realsense.generatePointCloud(pointcloud);
         sensor_msgs::PointCloud2 pointcloud_msg;
@@ -110,6 +115,7 @@ int main(int argc, char *argv[]){
         pointcloud_msg.header.stamp = ros::Time::now();
         realsense_depth_pub.publish(pointcloud_msg);
 
+        /*Some stuff (?)*/
         tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
 
         opts.lambdaIntersection[0 + 3*0] = lambdaIntersection; // right
@@ -135,11 +141,12 @@ int main(int argc, char *argv[]){
         opts.planeOffset[0] = planeOffset;
         opts.numIterations = 3;
 
+        //Magic!
         tracker->optimizePoses();
 
         // update accumulated info
         for (int m = 0; m < tracker->getNumModels(); ++m) {
-//        if (m == 1 && trackingMode == ModeIntermediate) { continue; }
+            //if (m == 1 && trackingMode == ModeIntermediate) { continue; }
             const Eigen::MatrixXf &JTJ = *tracker->getOptimizer()->getJTJ(m);
             ROS_INFO_STREAM("\n" << JTJ);
             if (JTJ.rows() == 0) { continue; }
@@ -160,7 +167,7 @@ int main(int argc, char *argv[]){
         ROS_INFO("\nerrPerObsPoint: %f\t\terrPerModPoint: %f", errPerObsPoint, errPerModPoint);
 
 //    infoLog.Log(errPerObsPoint,errPerObsPoint+errPerModPoint,stabilityThreshold,resetInfoThreshold);
-
+        // update poses (?)
         for (int m = 0; m < tracker->getNumModels(); ++m) {
             for (int i = 0; i < tracker->getPose(m).getReducedArticulatedDimensions(); ++i) {
                 poseVars[m][i + 6] = tracker->getPose(m).getReducedArticulation()[i];
