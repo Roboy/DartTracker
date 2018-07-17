@@ -9,8 +9,7 @@ int add_all_models(char* path, dart::Tracker *tracker){
     const static float defaultModelSdfResolution = 2e-3; //1.5e-3;
     const static float3 obsSdfOffset = make_float3(0,0,0.1);
 
-    std::list<char *>::iterator it;
-
+    list<char *>::iterator it;
     std::list<char*> subpaths;
     std::list<char*> modelpaths;
 
@@ -21,10 +20,9 @@ int add_all_models(char* path, dart::Tracker *tracker){
         if ( !strcmp( entry->d_name, "."  )) continue;
         if ( !strcmp( entry->d_name, ".." )) continue;
         if (entry->d_type == DT_DIR){
-            char *str = static_cast<char *>(malloc(255));
             // # windows style
+            char *str = static_cast<char *>(malloc(255));
             sprintf(str, "%s%s", path, entry->d_name);
-            printf("new subpath: %s\n", str);
             subpaths.push_front((char *)str);
         }
     }
@@ -33,14 +31,10 @@ int add_all_models(char* path, dart::Tracker *tracker){
     if (subpaths.size() == 0){
         subpaths.push_back(path);
     }
-    for (it = subpaths.begin(); it != subpaths.end() ; ++it) {
-        char *subpath = *it;
-        printf("list contains: %s  %s", subpath, it);
-    }
-        //go through all sub-directories and search for .xml files in there
+
+    //go through all sub-directories and search for .xml files in there
     for( it = subpaths.begin(); it != subpaths.end() ; ++it){
         char *subpath = *it;
-        printf("searching subpath: %s\n", subpath);
         DIR  *subdir = opendir( subpath );
         if ( subdir )
         {
@@ -52,27 +46,33 @@ int add_all_models(char* path, dart::Tracker *tracker){
                 //hopefully nobody names their files sth.xml.test -> crashes
                 if ( strstr( file->d_name, ".xml" )){
                     // # windows style
-                    char str[255];
-                    //sprintf(str, "%s/%s", subpath, file->d_name);
-                    //modelpaths.push_back((char *) str);
-                    printf( "found an .xml file: %s\n", file->d_name );
+                    char *str = static_cast<char *>(malloc(255));
+                    sprintf(str, "%s/%s", subpath, file->d_name);
+                    modelpaths.push_back((char *) str);
                 }
             }
             closedir( subdir );
-        }else {
-            ROS_INFO("Couldn't open path %s", subpath);
         }
     }
     for( it = modelpaths.begin(); it != modelpaths.end() ; ++it){
         char *modelpath = *it;
-        ROS_INFO("Attempting: %s", modelpath);
-        if(tracker->addModel(modelpath,
-                          0.5*defaultModelSdfResolution,
-                          0.5*0.5*defaultModelSdfResolution,
-                          64))
-            ROS_INFO("Loaded: %s", modelpath);
-        else
-            ROS_INFO("Failed to load: %s", modelpath);
+        try{
+            if(tracker->addModel(modelpath,
+                                 0.5*defaultModelSdfResolution,
+                                 0.5*0.5*defaultModelSdfResolution,
+                                 64))
+                ROS_INFO("Loaded: %s", modelpath);
+            else
+                ROS_INFO("Failed to load: %s", modelpath);
+        }catch(std::exception e) {
+            ROS_WARN(e.what());
+        }
+    }
+    for( it = subpaths.begin(); it != subpaths.end() ; ++it){
+        free(*it);
+    }
+    for( it = modelpaths.begin(); it != modelpaths.end() ; ++it) {
+        free(*it);
     }
     return 0;
 }
