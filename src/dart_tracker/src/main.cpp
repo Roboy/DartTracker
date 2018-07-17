@@ -1,7 +1,84 @@
 #include "dart_tracker/dartTracker.hpp"
+#include "list"
 #include <GL/glx.h>
 
+///
+int add_all_models(char* path, dart::Tracker *tracker){
+    const static int obsSdfSize = 64;
+    const static float obsSdfResolution = 0.01*32/obsSdfSize;
+    const static float defaultModelSdfResolution = 2e-3; //1.5e-3;
+    const static float3 obsSdfOffset = make_float3(0,0,0.1);
+
+    std::list<char *>::iterator it;
+
+    std::list<char*> subpaths;
+    std::list<char*> modelpaths;
+
+    //Read through current folder
+    DIR *dir = opendir(path);
+    struct dirent *entry;
+    while ((entry = readdir(dir))!= NULL){
+        if ( !strcmp( entry->d_name, "."  )) continue;
+        if ( !strcmp( entry->d_name, ".." )) continue;
+        if (entry->d_type == DT_DIR){
+            char *str = static_cast<char *>(malloc(255));
+            // # windows style
+            sprintf(str, "%s%s", path, entry->d_name);
+            printf("new subpath: %s\n", str);
+            subpaths.push_front((char *)str);
+        }
+    }
+    closedir(dir);
+    //in case path probably already pointed to concrete model folder
+    if (subpaths.size() == 0){
+        subpaths.push_back(path);
+    }
+    for (it = subpaths.begin(); it != subpaths.end() ; ++it) {
+        char *subpath = *it;
+        printf("list contains: %s  %s", subpath, it);
+    }
+        //go through all sub-directories and search for .xml files in there
+    for( it = subpaths.begin(); it != subpaths.end() ; ++it){
+        char *subpath = *it;
+        printf("searching subpath: %s\n", subpath);
+        DIR  *subdir = opendir( subpath );
+        if ( subdir )
+        {
+            struct dirent* file;
+            while (( file = readdir( subdir )) != NULL )
+            {
+                if ( !strcmp( file->d_name, "."  )) continue;
+                if ( !strcmp( file->d_name, ".." )) continue;
+                //hopefully nobody names their files sth.xml.test -> crashes
+                if ( strstr( file->d_name, ".xml" )){
+                    // # windows style
+                    char str[255];
+                    //sprintf(str, "%s/%s", subpath, file->d_name);
+                    //modelpaths.push_back((char *) str);
+                    printf( "found an .xml file: %s\n", file->d_name );
+                }
+            }
+            closedir( subdir );
+        }else {
+            ROS_INFO("Couldn't open path %s", subpath);
+        }
+    }
+    for( it = modelpaths.begin(); it != modelpaths.end() ; ++it){
+        char *modelpath = *it;
+        ROS_INFO("Attempting: %s", modelpath);
+        if(tracker->addModel(modelpath,
+                          0.5*defaultModelSdfResolution,
+                          0.5*0.5*defaultModelSdfResolution,
+                          64))
+            ROS_INFO("Loaded: %s", modelpath);
+        else
+            ROS_INFO("Failed to load: %s", modelpath);
+    }
+    return 0;
+}
+
 int main(int argc, char *argv[]){
+    const char *path = "/home/roboy/workspace/DartTracker/src/dart_tracker/models/";
     /* ROS setup */
     if (!ros::isInitialized()) {
         int argc = 0;
@@ -30,18 +107,11 @@ int main(int argc, char *argv[]){
     /*Setup of Dart tracker, models and depthimage source*/
     dart::Tracker *tracker = new dart::Tracker;
 
-    const static int obsSdfSize = 64;
-    const static float obsSdfResolution = 0.01*32/obsSdfSize;
-    const static float defaultModelSdfResolution = 2e-3; //1.5e-3;
-    const static float3 obsSdfOffset = make_float3(0,0,0.1);
 
-    tracker->addModel("/home/roboy/workspace/DartTracker/src/dart_tracker/models/testModel/shank.xml",
-                      0.5*defaultModelSdfResolution,
-                      0.5*0.5*defaultModelSdfResolution,
-                      64);
+    add_all_models((char *) path, tracker);
 
     // Depth image source
-    DartRealSense<uint16_t,uchar3> realsense;
+    DartRealSense<uint16_t,uchar3> realsense ;
 
     tracker->addDepthSource(&realsense);
 
@@ -160,7 +230,7 @@ int main(int argc, char *argv[]){
                                                dampingMatrix(i, i) + infoAccumulationRate * JTJ(i, i));
             }
         }
-
+        //TODO THis stuff not working?
         float errPerObsPoint = tracker->getOptimizer()->getErrPerObsPoint(1, 0);
         float errPerModPoint = tracker->getOptimizer()->getErrPerModPoint(1, 0);
 

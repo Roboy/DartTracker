@@ -50,7 +50,6 @@ public:
                 // Determine depth value corresponding to one meter
                 _scaleToMeters = 1.0f / realsense_dev->get_depth_scale();
 
-                // allocate data
 #ifdef CUDA_BUILD
                 _depthData = new MirroredVector<DepthType>(this->_depthWidth*this->_depthHeight);
 #else
@@ -142,12 +141,13 @@ public:
                     rs::float2 depth_pixel = { (float)dx, (float)dy };
                     float depth_in_meters = depth_value /_scaleToMeters;
 
+                    // since depth cam and rgb cam have physical offset, the depth-coords need to be transformed to obtain the correct colour values
                     rs::float3 depth_point = depth_intrin.deproject( depth_pixel, depth_in_meters );
                     rs::float3 color_point = depth_to_color.transform(depth_point);
                     rs::float2 color_pixel = color_intrin.project(color_point);
-
-                    const int cx = ( int )std::round( color_pixel.x );
-                    const int cy = ( int )std::round( color_pixel.y );
+                    //Clamp since transformation sometimes exceeds boundaries & round since indices int
+                    const int cx = clamp(( int )std::round( color_pixel.x ), 0, dw-1);
+                    const int cy = clamp(( int )std::round( color_pixel.y ), 0, dh-1);
 
                     static const float nan = std::numeric_limits<float>::quiet_NaN( );
 
@@ -197,7 +197,8 @@ public:
                     adjusted_z = real_z;
 
                     // Set up color point data
-                    const uint8_t *offset = ( (const uint8_t*)color_frame + ( cy * color_intrin.width + cx ) * 3 );
+                    int offset_val = ( cy * dw + cx ) * 3;
+                    const uint8_t *offset = ( (const uint8_t*)color_frame + ( cy * dw + cx ) * 3 );
 
                     uint8_t raw_r       = 0;
                     uint8_t raw_g       = 0;
@@ -214,6 +215,7 @@ public:
                     adjusted_r = raw_r;
                     adjusted_g = raw_g;
                     adjusted_b = raw_b;
+
 
                     // ==== Cloud Point Evaluation ====
                     // If bad point, remove & skip

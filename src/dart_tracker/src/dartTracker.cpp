@@ -30,50 +30,50 @@ DartTracker::DartTracker(){
                                        0.5*0.5*defaultModelSdfResolution,
                                        64);
 
-    tracker->addDepthSource(&realsense);
-
-    dart::MirroredModel & model = tracker->getModel(0);
-    dart::Pose & modelPose = tracker->getPose(0);
-
-    const int depthWidth = realsense.getDepthWidth();
-    const int depthHeight = realsense.getDepthHeight();
-
-    const int predWidth = tracker->getPredictionWidth();
-    const int predHeight = tracker->getPredictionHeight();
-
-    dart::MirroredVector<uchar3> imgDepthSize(depthWidth*depthHeight);
-    dart::MirroredVector<uchar3> imgPredSize(predWidth*predHeight);
-    dart::MirroredVector<const uchar3 *> allSdfColors(tracker->getNumModels());
-    for (int m=0; m<tracker->getNumModels(); ++m) {
-        allSdfColors.hostPtr()[m] = tracker->getModel(m).getDeviceSdfColors();
-    }
-    allSdfColors.syncHostToDevice();
-
-    float maxRotationDamping = 200;
-    float maxTranslationDamping = 10;
-    float infoAccumulationRate = 0.8;
-    float poseVars[1][12];
-
-    dart::OptimizationOptions & opts = tracker->getOptions();
-    opts.lambdaObsToMod = 1;
-    memset(opts.lambdaIntersection.data(),0,tracker->getNumModels()*tracker->getNumModels()*sizeof(float));
-    opts.contactThreshold = 0.02;
-    opts.planeNormal[0] =  make_float3(0,0,1);
-    opts.planeNormal[2] = make_float3(0,0,1);
-    opts.planeNormal[1] = make_float3(0,0,0);
-    opts.regularization[0] = opts.regularization[1] = opts.regularization[2] = 0.01;
-
-    float normalThreshold = -1.01f;
-    float distanceThreshold = 0.0f;
-    float handRegularization = 0.0f;
-    float objectRegularization = 1.0f;
-    float resetInfoThreshold = 1e-5;
-    float stabilityThreshold = 5e-5;
-    float lambdaModToObs = 0;
-    float lambdaObsToMod = 0;
-    float lambdaIntersection  = 1.0f;
-    float lambdaContact = 0;
-    float planeOffset = -0.05f;
+//    tracker->addDepthSource(&realsense);
+//
+//    dart::MirroredModel & model = tracker->getModel(0);
+//    dart::Pose & modelPose = tracker->getPose(0);
+//
+//    const int depthWidth = realsense.getDepthWidth();
+//    const int depthHeight = realsense.getDepthHeight();
+//
+//    const int predWidth = tracker->getPredictionWidth();
+//    const int predHeight = tracker->getPredictionHeight();
+//
+//    dart::MirroredVector<uchar3> imgDepthSize(depthWidth*depthHeight);
+//    dart::MirroredVector<uchar3> imgPredSize(predWidth*predHeight);
+//    dart::MirroredVector<const uchar3 *> allSdfColors(tracker->getNumModels());
+//    for (int m=0; m<tracker->getNumModels(); ++m) {
+//        allSdfColors.hostPtr()[m] = tracker->getModel(m).getDeviceSdfColors();
+//    }
+//    allSdfColors.syncHostToDevice();
+//
+//    float maxRotationDamping = 200;
+//    float maxTranslationDamping = 10;
+//    float infoAccumulationRate = 0.8;
+//    float poseVars[1][12];
+//
+//    dart::OptimizationOptions & opts = tracker->getOptions();
+//    opts.lambdaObsToMod = 1;
+//    memset(opts.lambdaIntersection.data(),0,tracker->getNumModels()*tracker->getNumModels()*sizeof(float));
+//    opts.contactThreshold = 0.02;
+//    opts.planeNormal[0] =  make_float3(0,0,1);
+//    opts.planeNormal[2] = make_float3(0,0,1);
+//    opts.planeNormal[1] = make_float3(0,0,0);
+//    opts.regularization[0] = opts.regularization[1] = opts.regularization[2] = 0.01;
+//
+//    float normalThreshold = -1.01f;
+//    float distanceThreshold = 0.0f;
+//    float handRegularization = 0.0f;
+//    float objectRegularization = 1.0f;
+//    float resetInfoThreshold = 1e-5;
+//    float stabilityThreshold = 5e-5;
+//    float lambdaModToObs = 0;
+//    float lambdaObsToMod = 0;
+//    float lambdaIntersection  = 1.0f;
+//    float lambdaContact = 0;
+//    float planeOffset = -0.05f;
 
 //    while(ros::ok()) {
 //
