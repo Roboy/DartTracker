@@ -61,11 +61,11 @@ int add_all_models(char* path, dart::Tracker *tracker){
                                  0.5*defaultModelSdfResolution,
                                  0.5*0.5*defaultModelSdfResolution,
                                  64))
-                ROS_INFO("Loaded: %s", modelpath);
+                ROS_INFO("\nLoaded: %s\n", modelpath);
             else
-                ROS_INFO("Failed to load: %s", modelpath);
+                ROS_INFO("\nFailed to load: %s\n", modelpath);
         }catch(std::exception e) {
-            ROS_WARN(e.what());
+            ROS_INFO(e.what());
         }
     }
     for( it = subpaths.begin(); it != subpaths.end() ; ++it){
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]){
         imshow("camera", image);
         waitKey(1);
 
-        /*Get and publish point cloud*/
+        /*Get and publish point cloud. This can be displayed in RVIZ to see what the camera perceives (depth and color)*/
         static uint seq = 0;
         realsense.generatePointCloud(pointcloud);
         sensor_msgs::PointCloud2 pointcloud_msg;
@@ -239,6 +239,8 @@ int main(int argc, char *argv[]){
 //    infoLog.Log(errPerObsPoint,errPerObsPoint+errPerModPoint,stabilityThreshold,resetInfoThreshold);
         // update poses (?)
         for (int m = 0; m < tracker->getNumModels(); ++m) {
+            printf(tracker->getModel(m).getName().c_str());
+            printf("\ngeometry scale: %f\n", tracker->getModel(m).getGeometryScale(0));
             for (int i = 0; i < tracker->getPose(m).getReducedArticulatedDimensions(); ++i) {
                 poseVars[m][i + 6] = tracker->getPose(m).getReducedArticulation()[i];
             }
@@ -253,7 +255,8 @@ int main(int argc, char *argv[]){
             poseVars[m][3] = t_cm.p[3];
             poseVars[m][4] = t_cm.p[4];
             poseVars[m][5] = t_cm.p[5];
-            ROS_INFO("\n%f\t%f\t%f\n%f\t%f\t%f", poseVars[0][0], poseVars[m][1], poseVars[m][2],
+
+            ROS_INFO("\n%f\t%f\t%f\n%f\t%f\t%f", poseVars[m][0], poseVars[m][1], poseVars[m][2],
                      poseVars[m][3], poseVars[m][4], poseVars[m][5]);
         }
 
