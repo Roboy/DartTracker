@@ -2,6 +2,12 @@
 #include "list"
 #include <GL/glx.h>
 
+/// used as inital pose for tracked objects - no clue why these values
+static const dart::SE3 initialT_co(make_float4(0.262348, -0.955909, -0.131952, 0.0238097),
+                                   make_float4(-0.620357, -0.271813, 0.735714, -0.178571),
+                                   make_float4(-0.739142, -0.111156, -0.664314, 0.702381));
+
+
 ///
 int add_all_models(char* path, dart::Tracker *tracker){
     const static int obsSdfSize = 64;
@@ -77,6 +83,17 @@ int add_all_models(char* path, dart::Tracker *tracker){
     return 0;
 }
 
+
+int init_models(dart::Tracker *tracker){
+    for (int m=0; m<tracker->getNumModels(); ++m) {
+        dart::MirroredModel & object = tracker->getModel(m);
+        dart::Pose objectPose = tracker->getPose(m);
+        objectPose.setTransformModelToCamera(initialT_co);
+        object.setPose(objectPose);
+    }
+    return 0;
+}
+
 int main(int argc, char *argv[]){
     const char *path = "/home/roboy/workspace/DartTracker/src/dart_tracker/models/";
     /* ROS setup */
@@ -106,17 +123,19 @@ int main(int argc, char *argv[]){
 
     /*Setup of Dart tracker, models and depthimage source*/
     dart::Tracker *tracker = new dart::Tracker;
-
-
     add_all_models((char *) path, tracker);
+    init_models(tracker);
 
     // Depth image source
     DartRealSense<uint16_t,uchar3> realsense ;
 
     tracker->addDepthSource(&realsense);
 
+    /*Not used as of now
+     * note: in example, these values are used to set position of models....is that needed?
     dart::MirroredModel & model = tracker->getModel(0);
     dart::Pose & modelPose = tracker->getPose(0);
+    */
 
     const int depthWidth = realsense.getDepthWidth();
     const int depthHeight = realsense.getDepthHeight();
@@ -166,14 +185,16 @@ int main(int argc, char *argv[]){
     tf::Quaternion quat;
     quat.setRPY(M_PI / 2, 0, 0);
     realsense_tf.setRotation(quat);
-
+    Mat image = Mat();
     /*Main loop - only works while connection to roscore*/
     while(ros::ok()) {
         realsense.advance();
-
-        Mat image = Mat(480, 640, CV_8UC3, (uint8_t*)realsense.color_frame);
+        if(image.u != nullptr)
+            image.release();
+        image = Mat(480, 640, CV_8UC3, (uint8_t*)realsense.color_frame);
         imshow("camera", image);
         waitKey(1);
+
 
         /*Get and publish point cloud. This can be displayed in RVIZ to see what the camera perceives (depth and color)*/
         static uint seq = 0;
@@ -249,7 +270,7 @@ int main(int argc, char *argv[]){
             T_cm.r0.w = 0;
             poseVars[m][1] = T_cm.r1.w;
             T_cm.r1.w = 0;
-            poseVars[m][2] = T_cm.r2.w;
+            poseVars[m][2] = T_cm.r2.w; // FIXME this value causes an overflow in image ??!!!!!!!
             T_cm.r2.w = 0;
             dart::se3 t_cm = dart::se3FromSE3(T_cm);
             poseVars[m][3] = t_cm.p[3];
