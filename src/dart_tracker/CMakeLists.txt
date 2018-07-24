@@ -26,6 +26,11 @@ set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-8.0" )
 # find packages with modules
 find_package(CUDA REQUIRED)
 
+#TODO: only required for extended demo!! 
+find_package(Pangolin)
+include_directories(extended_demo ${Pangolin_INCLUDE_DIRS} )
+link_directories( extended_demo ${Pangolin_LIBRARY_DIRS} )
+
 find_package(OpenCV REQUIRED
         COMPONENTS
         opencv_highgui
@@ -73,3 +78,6 @@ target_link_libraries( dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librea
 
 cuda_add_executable(  roboy_dart_tracker src/main.cpp )
 target_link_libraries( roboy_dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES} ${OpenCV_LIBRARIES})
+
+cuda_add_executable(  extended_demo src/extended_demo.cpp )
+target_link_libraries( extended_demo ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES} ${OpenCV_LIBRARIES} ${Pangolin_LIBRARIES})

@@ -28,10 +28,18 @@
 #include "visualization/gradient_viz.h"
 #include "visualization/sdf_viz.h"
 
+
+//#define REALSENSE
+
+#ifdef REALSENSE
+#include "dart_tracker/dartTracker.hpp"
+#endif
+
 #define EIGEN_DONT_ALIGN
 
 using namespace std;
 
+#ifndef REALSENSE
 enum PointColorings {
     PointColoringNone = 0,
     PointColoringRGB,
@@ -58,50 +66,10 @@ enum TrackingMode {
     ModeObjGrasped,
     ModeObjGraspedLeft
 };
-
-std::string getTrackingModeString(const TrackingMode mode) {
-    switch (mode) {
-    case ModeObjOnTable:
-        return "object on table";
-    case ModeIntermediate:
-        return "intermediate";
-    case ModeObjGrasped:
-        return "object grasped";
-    case ModeObjGraspedLeft:
-        return "object grasped in left hand";
-    }
-}
-
 const static int panelWidth = 180;
 
 static const int fullArmFingerTipFrames[10] = { 11, 15, 19, 23, 27,  38, 42, 46, 50, 54 };
 static const int handFingerTipFrames[5] = { 4, 8, 12, 16, 20 };
-
-void setSlidersFromTransform(dart::SE3& transform, pangolin::Var<float>** sliders) {
-    *sliders[0] = transform.r0.w; transform.r0.w = 0;
-    *sliders[1] = transform.r1.w; transform.r1.w = 0;
-    *sliders[2] = transform.r2.w; transform.r2.w = 0;
-    dart::se3 t = dart::se3FromSE3(transform);
-    *sliders[3] = t.p[3];
-    *sliders[4] = t.p[4];
-    *sliders[5] = t.p[5];
-}
-void setSlidersFromTransform(const dart::SE3& transform, pangolin::Var<float>** sliders) {
-    dart::SE3 mutableTransform = transform;
-    setSlidersFromTransform(mutableTransform,sliders);
-}
-const static dart::SE3 T_wh = dart::SE3FromRotationY(M_PI)*dart::SE3FromRotationX(-M_PI_2)*dart::SE3FromTranslation(make_float3(0,0,0.138));//dart::SE3Fromse3(dart::se3(0,0,0.1,0,2.22144,2.22144)); //dart::SE3art::SE3Fromse3(dart::se3(0, 0.108385,-0.108385, 1.5708, 0, 0)); // = dart::SE3Invert(dart::SE3Fromse3(dart::se3(0, 0.115, -0.115, 1.5708, 0, 0)));
-const static dart::SE3 T_hw = dart::SE3Invert(T_wh);
-const static dart::SE3 T_wc = dart::SE3FromTranslation(make_float3(-0.2,0.8,0))*
-        dart::SE3Fromse3(dart::se3(0,0,0,0,M_PI_2,0))*
-        dart::SE3Fromse3(dart::se3(0,0,0, 2.1,0,0));
-
-const static int rightShoulderFrame = 1;
-const static int rightPalmFrame = 7;
-const static int leftShoulderFrame = 28;
-const static int leftPalmFrame = 34;
-const static int headFrame = 56;
-
 void loadReportedJointAnglesAndContacts(std::string jointAngleFile, std::string contactFile,
                                         std::vector<float *> & jointAngles, std::vector<int *> & contacts) {
 
@@ -142,6 +110,47 @@ void loadReportedJointAnglesAndContacts(std::string jointAngleFile, std::string 
     contactStream.close();
 
 }
+#endif
+const float colours[15] = {0,0,0.1, 0.2, 0.2, 0, 0.4, 0, 0.4, 0.8, 0, 0, 0, 1, 1};
+const int colour_num = 5;
+
+std::string getTrackingModeString(const TrackingMode mode) {
+    switch (mode) {
+        case ModeObjOnTable:
+            return "object on table";
+        case ModeIntermediate:
+            return "intermediate";
+        case ModeObjGrasped:
+            return "object grasped";
+        case ModeObjGraspedLeft:
+            return "object grasped in left hand";
+    }
+}
+
+void setSlidersFromTransform(dart::SE3& transform, pangolin::Var<float>** sliders) {
+    *sliders[0] = transform.r0.w; transform.r0.w = 0;
+    *sliders[1] = transform.r1.w; transform.r1.w = 0;
+    *sliders[2] = transform.r2.w; transform.r2.w = 0;
+    dart::se3 t = dart::se3FromSE3(transform);
+    *sliders[3] = t.p[3];
+    *sliders[4] = t.p[4];
+    *sliders[5] = t.p[5];
+}
+void setSlidersFromTransform(const dart::SE3& transform, pangolin::Var<float>** sliders) {
+    dart::SE3 mutableTransform = transform;
+    setSlidersFromTransform(mutableTransform,sliders);
+}
+const static dart::SE3 T_wh = dart::SE3FromRotationY(M_PI)*dart::SE3FromRotationX(-M_PI_2)*dart::SE3FromTranslation(make_float3(0,0,0.138));//dart::SE3Fromse3(dart::se3(0,0,0.1,0,2.22144,2.22144)); //dart::SE3art::SE3Fromse3(dart::se3(0, 0.108385,-0.108385, 1.5708, 0, 0)); // = dart::SE3Invert(dart::SE3Fromse3(dart::se3(0, 0.115, -0.115, 1.5708, 0, 0)));
+const static dart::SE3 T_hw = dart::SE3Invert(T_wh);
+const static dart::SE3 T_wc = dart::SE3FromTranslation(make_float3(-0.2,0.8,0))*
+                              dart::SE3Fromse3(dart::se3(0,0,0,0,M_PI_2,0))*
+                              dart::SE3Fromse3(dart::se3(0,0,0, 2.1,0,0));
+
+const static int rightShoulderFrame = 1;
+const static int rightPalmFrame = 7;
+const static int leftShoulderFrame = 28;
+const static int leftPalmFrame = 34;
+const static int headFrame = 56;
 
 static const dart::SE3 initialT_cj(make_float4(-0.476295, -0.0945505, -0.874187, -0.22454),
                                    make_float4(-0.625852, 0.734788, 0.26152, -0.305038   ),
@@ -155,12 +164,11 @@ static float3 initialTableNorm = make_float3(0.0182391, 0.665761, -0.745942);
 static float initialTableIntercept = -0.705196;
 
 int main() {
-
-    const std::string objectModelFile = "../models/ikeaMug/ikeaMug.xml";
+    const std::string objectModelFile = "src/dartExample/models/ikeaMug/ikeaMug.xml";//"src/dart_tracker/models/mug/mug.xml";
     const float objObsSdfRes = 0.0025;
     const float3 objObsSdfOffset = make_float3(0,0,0);
 
-    const std::string videoLoc = "../video/";
+    const std::string videoLoc = "src/dartExample/video";
 
     // -=-=-=- initializations -=-=-=-
     cudaSetDevice(0);
@@ -205,7 +213,7 @@ int main() {
             .SetBounds(1.0, 0.0, pangolin::Attach::Pix(2*panelWidth), pangolin::Attach::Pix(-2*panelWidth))
             .SetLayout(pangolin::LayoutEqual)
             .AddDisplay(camDisp)
-            //            .AddDisplay(infoPlotter)
+                    //            .AddDisplay(infoPlotter)
             .AddDisplay(imgDisp);
 
 //    imgDisp.Show(false);
@@ -213,46 +221,58 @@ int main() {
     float defaultModelSdfPadding = 0.07;
 
     std::vector<pangolin::Var<float> *> sizeVars;
-
-    // initialize depth source
-    dart::ImageDepthSource<ushort,uchar3> * depthSource = new dart::ImageDepthSource<ushort,uchar3>();
-    depthSource->initialize(videoLoc+"/depth",dart::IMAGE_PNG,
-                            make_float2(525/2,525/2),make_float2(160,120),
-                            320,240,0.001,0);
-//                            true,videoLoc+"/color",dart::IMAGE_PNG,320,240);
-
-    tracker.addDepthSource(depthSource);
-    dart::Optimizer & optimizer = *tracker.getOptimizer();
-    const int depthWidth = depthSource->getDepthWidth();
-    const int depthHeight = depthSource->getDepthHeight();
-
-    /*
-    //---- OTHER DEPTH SOURCE --- multiple depth source not supported yet -> change order, first one gets priority
-    DartRealSense<uint16_t,uchar3> realsense ;
-    tracker->addDepthSource(&realsense);
-    const int depthWidth = realsense.getDepthWidth();
-    const int depthHeight = realsense.getDepthHeight();
-    tf::Transform realsense_tf;
-    realsense_tf.setOrigin(tf::Vector3(0, 0, 2.0));
-    tf::Quaternion quat;
-    quat.setRPY(M_PI / 2, 0, 0);
-    realsense_tf.setRotation(quat);
-    //visualisation
-    Mat image = Mat();
+#ifdef REALSENSE
+    printf("Using realsense!\n");
+    /* ROS setup */
+    if (!ros::isInitialized()) {
+        int argc = 0;
+        char *argv = nullptr;
+        ros::init(argc, &argv, "roboy_dart_tracker",
+                  ros::init_options::AnonymousName |
+                  ros::init_options::NoRosout);
+    }
     //ros and rviz related
     ros::NodeHandlePtr nh = ros::NodeHandlePtr(new ros::NodeHandle);
 
-    ros::Publisher realsense_image_pub = nh->advertise<sensor_msgs::Image>("/DartTracker/realsense_color", 1);
-    ros::Publisher realsense_depth_pub = nh->advertise<PointCloud>("/DartTracker/realsense_depth", 1);
+    ros::Publisher realsense_image_pub = nh->advertise<sensor_msgs::Image>("src/DartTracker/realsense_color", 1);
+    ros::Publisher realsense_depth_pub = nh->advertise<PointCloud>("src/DartTracker/realsense_depth", 1);
 
     boost::shared_ptr<ros::AsyncSpinner> spinner = boost::shared_ptr<ros::AsyncSpinner>(new ros::AsyncSpinner(1));
     spinner->start();
 
     PointCloudRGB::Ptr pointcloud = PointCloudRGB::Ptr(new PointCloudRGB);
     tf::TransformBroadcaster tf_broadcaster;
-*/
+
+    //---- OTHER DEPTH SOURCE --- multiple depth source not supported yet -> change order, first one gets priority
+    DartRealSense<uint16_t,uchar3> *depthSource = new DartRealSense<uint16_t,uchar3>();
+    tracker.addDepthSource(depthSource);
+
+    const int depthWidth = depthSource->getDepthWidth();
+    const int depthHeight = depthSource->getDepthHeight();
+    tf::Transform realsense_tf;
+    realsense_tf.setOrigin(tf::Vector3(0, 0, 2.0));
+    tf::Quaternion quat;
+    quat.setRPY(M_PI / 2, 0, 0);
+    realsense_tf.setRotation(quat);
+
+    //visualisation
+    Mat image = Mat();
+#else
+    dart::ImageDepthSource<ushort,uchar3> * depthSource = new dart::ImageDepthSource<ushort,uchar3>();
+    // initialize depth source
+    depthSource->initialize(videoLoc+"/depth",dart::IMAGE_PNG,
+                            make_float2(525/2,525/2),make_float2(160,120),
+                            320,240,0.001,0);
+//                            true,videoLoc+"/color",dart::IMAGE_PNG,320,240);
+
+    tracker.addDepthSource(depthSource);
+    const int depthWidth = depthSource->getDepthWidth();
+    const int depthHeight = depthSource->getDepthHeight();
+
+#endif
     // ----
 
+    dart::Optimizer & optimizer = *tracker.getOptimizer();
 
     const static int obsSdfSize = 64;
     const static float obsSdfResolution = 0.01*32/obsSdfSize;
@@ -262,9 +282,9 @@ int main() {
     pangolin::Var<float> modelSdfResolution("lim.modelSdfResolution",defaultModelSdfResolution,defaultModelSdfResolution/2,defaultModelSdfResolution*2);
     pangolin::Var<float> modelSdfPadding("lim.modelSdfPadding",defaultModelSdfPadding,defaultModelSdfPadding/2,defaultModelSdfPadding*2);
 
-    dart::ParamMapPoseReduction * handPoseReduction = dart::loadParamMapPoseReduction("../models/spaceJustin/justinHandParamMap.txt");
+    dart::ParamMapPoseReduction * handPoseReduction = dart::loadParamMapPoseReduction("src/dartExample/models/spaceJustin/justinHandParamMap.txt");
 
-    tracker.addModel("../models/spaceJustin/spaceJustinHandRight.xml",
+    tracker.addModel("src/dartExample/models/spaceJustin/spaceJustinHandRight.xml",
                      modelSdfResolution,
                      modelSdfPadding,
                      obsSdfSize,
@@ -276,11 +296,11 @@ int main() {
     memset(reportedPosePrior.getWeights(),0,6*sizeof(float));
 
     dart::HostOnlyModel spaceJustin;
-    dart::readModelXML("../models/spaceJustin/spaceJustinArmsAndHead.xml",spaceJustin);
+    dart::readModelXML("src/dartExample/models/spaceJustin/spaceJustinArmsAndHead.xml",spaceJustin);
 
     spaceJustin.computeStructure();
 
-    dart::LinearPoseReduction * justinPoseReduction = dart::loadLinearPoseReduction("../models/spaceJustin/spaceJustinPoseReduction.txt");
+    dart::LinearPoseReduction * justinPoseReduction = dart::loadLinearPoseReduction("src/dartExample/models/spaceJustin/spaceJustinPoseReduction.txt");
 
     dart::Pose spaceJustinPose(justinPoseReduction);
 //    std::cout << spaceJustinPose.getReducedArticulatedDimensions() << " full justin articulated dimensions" << std::endl;
@@ -292,9 +312,9 @@ int main() {
 //                     objObsSdfRes,
 //                     objObsSdfOffset);
 
-    tracker.addModel("../models/spaceJustin/spaceJustinHandLeft.xml",
-                     //"../models/spaceJustinArms.xml",
-                     //0.1,
+    tracker.addModel("src/dartExample/models/spaceJustin/spaceJustinHandLeft.xml",
+            //"../models/spaceJustinArms.xml",
+            //0.1,
                      modelSdfResolution,
                      modelSdfPadding,
                      obsSdfSize,
@@ -302,7 +322,7 @@ int main() {
                      make_float3(-0.5*obsSdfSize*obsSdfResolution) + obsSdfOffset,
                      handPoseReduction);
 
-    tracker.addModel("../models/xylophone/xylophone.xml",
+    tracker.addModel("src/dart_tracker/models/xylophone/xylophone.xml",
                      0.5*modelSdfResolution,
                      modelSdfPadding,
                      64);
@@ -362,7 +382,7 @@ int main() {
 
     // optimization options
     //variable style: name, initial value, min possible val, max possible val
-    //TODO: VERY IMPORTANT: KEEP INITIAL VALUES -> OTHERWISE TRACKING WILL SUCK HAD
+    //TODO: VERY IMPORTANT: KEEP INITIAL VALUES -> OTHERWISE TRACKING WILL NOT WORK
     pangolin::Var<bool> iterateButton("opt.iterate",false,false);
     pangolin::Var<int> itersPerFrame("opt.itersPerFrame",3,0,30);
     pangolin::Var<float> normalThreshold("opt.normalThreshold",-1.01,-1.01,1.0);
@@ -417,7 +437,23 @@ int main() {
     }
     allSdfColors.syncHostToDevice();
 
+#ifdef REALSENSE
+    //TODO: which values to use???
+    //float colors[depthHeight * depthWidth * sizeof(uchar)] = depthSource;
+    //float positions[depthHeight * depthWidth * sizeof(float4)] = depthSource->generatePointCloud();
+    GLuint pointCloudVbo,pointCloudColorVbo,pointCloudNormVbo;
+    glGenBuffersARB(1,&pointCloudVbo);
+    glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudVbo);
+    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),imgDepthSize.hostPtr(),GL_DYNAMIC_DRAW_ARB);
+    glGenBuffersARB(1,&pointCloudColorVbo);
+    glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudColorVbo);
+    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),imgDepthSize.hostPtr(),GL_DYNAMIC_DRAW_ARB);
+    glGenBuffersARB(1,&pointCloudNormVbo);
+    glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
+    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
+#else
     // set up VBO to display point cloud
+    //GL unsigned integer type
     GLuint pointCloudVbo,pointCloudColorVbo,pointCloudNormVbo;
     glGenBuffersARB(1,&pointCloudVbo);
     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudVbo);
@@ -428,7 +464,7 @@ int main() {
     glGenBuffersARB(1,&pointCloudNormVbo);
     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
     glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
-
+#endif
 
     dart::OptimizationOptions & opts = tracker.getOptions();
     opts.lambdaObsToMod = 1;
@@ -482,13 +518,12 @@ int main() {
     dart::Pose & objectPose = tracker.getPose(1);
     dart::Pose & xylophonePose = tracker.getPose(3);
 
-
+#ifndef REALSENSE
     // set up reported pose offsets
     std::vector<float *> reportedJointAngles;
     std::vector<int *> reportedContacts;
     loadReportedJointAnglesAndContacts(videoLoc+"/reportedJointAngles.txt",videoLoc+"/reportedContacts.txt",
                                        reportedJointAngles,reportedContacts);
-
     std::cout << "loaded " << reportedJointAngles.size() << " frames" << std::endl;
 
     // -=-=-=-=- set up initial poses -=-=-=-=-
@@ -496,6 +531,13 @@ int main() {
     memcpy(spaceJustinPose.getReducedArticulation(),reportedJointAngles[depthSource->getFrame()],spaceJustinPose.getReducedArticulatedDimensions()*sizeof(float));
     spaceJustinPose.projectReducedToFull();
     spaceJustin.setPose(spaceJustinPose);
+#else
+    // -=-=-=-=- set up initial poses -=-=-=-=-
+    spaceJustinPose.setTransformModelToCamera(initialT_cj);
+    spaceJustinPose.projectReducedToFull();
+    spaceJustin.setPose(spaceJustinPose);
+#endif
+
 
     rightHandPose.setTransformModelToCamera(spaceJustin.getTransformFrameToCamera(rightPalmFrame)*T_wh);
     memcpy(rightHandPose.getReducedArticulation(),spaceJustinPose.getReducedArticulation() + 7,rightHandPose.getReducedArticulatedDimensions()*sizeof(float));
@@ -522,17 +564,17 @@ int main() {
 
     // ------------------- main loop ---------------------
     for (int pangolinFrame=1; !pangolin::ShouldQuit(); ++pangolinFrame) {
-
-        /*REALSENSE STUFF
-        realsense.advance();
+#ifdef REALSENSE
+        /*REALSENSE STUFF*/
+        depthSource->advance();
         image.release();
-        image = Mat(480, 640, CV_8UC3, (uint8_t*)realsense.color_frame);
+        image = Mat(480, 640, CV_8UC3, (uint8_t*)depthSource->color_frame);
         imshow("camera", image);
         waitKey(1);
 
-        //Get and publish point cloud. This can be displayed in RVIZ to see what the camera perceives (depth and color)
+        depthSource->generatePointCloud(pointcloud);
+        /*Get and publish point cloud. This can be displayed in RVIZ to see what the camera perceives (depth and color)
         static uint seq = 0;
-        realsense.generatePointCloud(pointcloud);
         sensor_msgs::PointCloud2 pointcloud_msg;
         pcl::toROSMsg(*pointcloud,pointcloud_msg);
         pointcloud_msg.header.frame_id = "real_sense";
@@ -541,7 +583,7 @@ int main() {
         realsense_depth_pub.publish(pointcloud_msg);
         tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
         END REALSENSE*/
-
+#endif
         if (pangolin::HasResized()) {
             pangolin::DisplayBase().ActivateScissorAndClear();
         }
@@ -644,7 +686,7 @@ int main() {
                         tracker.getPose(m).getReducedArticulation()[i] = *poseVars[m][i+6];
                     }
                     tracker.getPose(m).setTransformModelToCamera(dart::SE3Fromse3(dart::se3(*poseVars[m][0],*poseVars[m][1],*poseVars[m][2],0,0,0))*
-                            dart::SE3Fromse3(dart::se3(0,0,0,*poseVars[m][3],*poseVars[m][4],*poseVars[m][5])));
+                                                                 dart::SE3Fromse3(dart::se3(0,0,0,*poseVars[m][3],*poseVars[m][4],*poseVars[m][5])));
                     tracker.updatePose(m);
                 }
             }
@@ -737,7 +779,6 @@ int main() {
 
             if (showVoxelized) {
                 glColor3f(0.2,0.3,1.0);
-
                 for (int m=0; m<tracker.getNumModels(); ++m) {
 //                for (int m=1; m<=1; m+=10) {
                     tracker.updatePose(m);
@@ -755,6 +796,7 @@ int main() {
 
         }
 
+#ifndef  REALSENSE
         if (showReported) {
             /*SHOWS estimated position (reported joint angles)*/
             glColor3ub(0xfa,0x85,0x7c);
@@ -766,6 +808,7 @@ int main() {
             // glColor3ub(0,0,0);
             // glutSolidSphere(0.02,10,10);
         }
+#endif
 
         glPointSize(1.0f);
 
@@ -821,22 +864,22 @@ int main() {
             glVertexPointer(4, GL_FLOAT, 0, 0);
 
             switch (pointColoringObs) {
-            case PointColoringNone:
-                glColor3f(0.25,0.25,0.25);
-                glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
-                glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
+                case PointColoringNone:
+                    glColor3f(0.25,0.25,0.25);
+                    glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
+                    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
 
-                glNormalPointer(GL_FLOAT, 4*sizeof(float), 0);
-                glEnableClientState(GL_NORMAL_ARRAY);
-                break;
-            case PointColoringRGB:
-                glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudColorVbo);
-                glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),depthSource->getColor(),GL_DYNAMIC_DRAW_ARB);
-                glColorPointer(3,GL_UNSIGNED_BYTE, 0, 0);
-                glEnableClientState(GL_COLOR_ARRAY);
-                glDisable(GL_LIGHTING);
-                break;
-            case PointColoringErr:
+                    glNormalPointer(GL_FLOAT, 4*sizeof(float), 0);
+                    glEnableClientState(GL_NORMAL_ARRAY);
+                    break;
+                case PointColoringRGB:
+                    glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudColorVbo);
+                    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),depthSource->getColor(),GL_DYNAMIC_DRAW_ARB);
+                    glColorPointer(3,GL_UNSIGNED_BYTE, 0, 0);
+                    glEnableClientState(GL_COLOR_ARRAY);
+                    glDisable(GL_LIGHTING);
+                    break;
+                case PointColoringErr:
                 {
                     static float errorMin = 0.0;
                     static float errorMax = 0.1;
@@ -852,8 +895,8 @@ int main() {
                     glEnableClientState(GL_COLOR_ARRAY);
                     glDisable(GL_LIGHTING);
                 }
-                break;
-            case PointColoringDA:
+                    break;
+                case PointColoringDA:
                 {
                     const int * dDebugDA = tracker.getDeviceDebugDataAssociationObsToMod();
                     dart::colorDataAssociationMultiModel(imgDepthSize.devicePtr(),dDebugDA,allSdfColors.devicePtr(),depthWidth,depthHeight);
@@ -864,7 +907,7 @@ int main() {
                     glEnableClientState(GL_COLOR_ARRAY);
                     glDisable(GL_LIGHTING);
                 }
-                break;
+                    break;
             }
 
             glDrawArrays(GL_POINTS,0,depthWidth*depthHeight);
@@ -992,7 +1035,7 @@ int main() {
                 }
             }
                 break;
-        case DebugObsDepth:
+            case DebugObsDepth:
             {
 
                 static const float depthMin = 0.3;
@@ -1013,7 +1056,7 @@ int main() {
                 imgTexDepthSize.Upload(imgDepthSize.hostPtr(),GL_RGB,GL_UNSIGNED_BYTE);
                 imgTexDepthSize.RenderToViewport();
             }
-        case DebugPredictedDepth:
+            case DebugPredictedDepth:
             {
                 static const float depthMin = 0.3;
                 static const float depthMax = 1.0;
@@ -1036,28 +1079,28 @@ int main() {
                 imgTexPredictionSize.Upload(imgPredSize.hostPtr(),GL_RGB,GL_UNSIGNED_BYTE);
                 imgTexPredictionSize.RenderToViewport();
             }
-            break;
-        case DebugObsToModDA:
-        {
-            dart::colorDataAssociationMultiModel(imgDepthSize.devicePtr(),
-                                                 tracker.getDeviceDebugDataAssociationObsToMod(),
-                                                 allSdfColors.devicePtr(),depthWidth,depthHeight);\
+                break;
+            case DebugObsToModDA:
+            {
+                dart::colorDataAssociationMultiModel(imgDepthSize.devicePtr(),
+                                                     tracker.getDeviceDebugDataAssociationObsToMod(),
+                                                     allSdfColors.devicePtr(),depthWidth,depthHeight);\
             imgDepthSize.syncDeviceToHost();
-            imgTexDepthSize.Upload(imgDepthSize.hostPtr(),GL_RGB,GL_UNSIGNED_BYTE);
-            imgTexDepthSize.RenderToViewport();
-            break;
-        }
-        case DebugModToObsDA:
-        {
-            dart::colorDataAssociationMultiModel(imgPredSize.devicePtr(),
-                                                 tracker.getDeviceDebugDataAssociationModToObs(),
-                                                 allSdfColors.devicePtr(),predWidth,predHeight);\
+                imgTexDepthSize.Upload(imgDepthSize.hostPtr(),GL_RGB,GL_UNSIGNED_BYTE);
+                imgTexDepthSize.RenderToViewport();
+                break;
+            }
+            case DebugModToObsDA:
+            {
+                dart::colorDataAssociationMultiModel(imgPredSize.devicePtr(),
+                                                     tracker.getDeviceDebugDataAssociationModToObs(),
+                                                     allSdfColors.devicePtr(),predWidth,predHeight);\
             imgPredSize.syncDeviceToHost();
-            imgTexPredictionSize.Upload(imgPredSize.hostPtr(),GL_RGB,GL_UNSIGNED_BYTE);
-            imgTexPredictionSize.RenderToViewport();
-            break;
-        }
-        case DebugObsToModErr:
+                imgTexPredictionSize.Upload(imgPredSize.hostPtr(),GL_RGB,GL_UNSIGNED_BYTE);
+                imgTexPredictionSize.RenderToViewport();
+                break;
+            }
+            case DebugObsToModErr:
             {
                 static const float errMax = 0.01;
                 dart::colorRampHeatMapUnsat(imgDepthSize.devicePtr(),
@@ -1068,8 +1111,8 @@ int main() {
                 imgTexDepthSize.Upload(imgDepthSize.hostPtr(),GL_RGB,GL_UNSIGNED_BYTE);
                 imgTexDepthSize.RenderToViewport();
             }
-            break;
-        case DebugModToObsErr:
+                break;
+            case DebugModToObsErr:
             {
                 static const float errMax = 0.01;
                 dart::colorRampHeatMapUnsat(imgPredSize.devicePtr(),
@@ -1080,13 +1123,13 @@ int main() {
                 imgTexPredictionSize.Upload(imgPredSize.hostPtr(),GL_RGB,GL_UNSIGNED_BYTE);
                 imgTexPredictionSize.RenderToViewport();
             }
-            break;
-        case DebugJTJ:
-            imgTexDepthSize.Upload(tracker.getOptimizer()->getJTJimg(),GL_RGB,GL_UNSIGNED_BYTE);
-            imgTexDepthSize.RenderToViewportFlipY();
-            break;
-        default:
-            break;
+                break;
+            case DebugJTJ:
+                imgTexDepthSize.Upload(tracker.getOptimizer()->getJTJimg(),GL_RGB,GL_UNSIGNED_BYTE);
+                imgTexDepthSize.RenderToViewportFlipY();
+                break;
+            default:
+                break;
         }
 
         cudaError_t err = cudaGetLastError();
@@ -1100,13 +1143,14 @@ int main() {
 
             tracker.stepForward();
 
+#ifndef REALSENSE
             const float * currentReportedPose = reportedJointAngles[depthSource->getFrame()];
             const float * lastReportedPose = reportedJointAngles[depthSource->getFrame()-1];
 
             memcpy(spaceJustinPose.getReducedArticulation(),lastReportedPose,spaceJustinPose.getReducedArticulatedDimensions()*sizeof(float));
             spaceJustinPose.projectReducedToFull();
             spaceJustin.setPose(spaceJustinPose);
-
+#endif
             dart::SE3 lastT_ro = rightHand.getTransformCameraToModel()*object.getTransformModelToCamera();
             lastT_ro = dart::SE3Fromse3(dart::se3FromSE3(lastT_ro));
 
@@ -1124,9 +1168,11 @@ int main() {
             spaceJustin.setPose(spaceJustinPose);
             dart::SE3 T_newc_oldc = T_newc_base*dart::SE3Invert(T_oldc_base);
 
+#ifndef REALSENSE
             memcpy(spaceJustinPose.getReducedArticulation(),currentReportedPose,spaceJustinPose.getReducedArticulatedDimensions()*sizeof(float));
             spaceJustinPose.projectReducedToFull();
             spaceJustin.setPose(spaceJustinPose);
+#endif
 
             dart::SE3 currentT_head_r = spaceJustin.getTransformModelToFrame(headFrame)*spaceJustin.getTransformFrameToModel(rightPalmFrame)*T_wh;
             dart::SE3 update_r = dart::SE3Invert(dart::SE3Invert(currentT_head_r)*lastT_head_r); // TODO: simplify
@@ -1142,6 +1188,7 @@ int main() {
             leftHandPose.setTransformModelToCamera(leftHand.getTransformModelToCamera()*update_l);
             leftHand.setPose(leftHandPose);
 
+#ifndef REALSENSE
             //Update right hand
             // apply finger joint deltas (works since ptr -> updates val of addr)
             float * rightHandArticulation = tracker.getPose(0).getReducedArticulation();
@@ -1159,6 +1206,8 @@ int main() {
                 leftHandArticulation[i] += diff;
             }
             tracker.updatePose(2);
+#endif
+
             //update obj
             // apply object 6DoF delta
             if (trackingMode == ModeObjGrasped) {
@@ -1174,6 +1223,7 @@ int main() {
             object.setPose(objectPose);
             xylophone.setPose(xylophonePose);
 
+#ifndef REALSENSE
             // update contact vars
             const int * contact = reportedContacts[depthSource->getFrame()];
             for (int i=0; i<10; ++i) {
@@ -1182,7 +1232,7 @@ int main() {
                 *contactVars[i] = inContact;
                 contactPriors[i]->setWeight(inContact ? lambdaContact : 0);
             }
-
+#endif
             // update table based on head movement
             {
                 float4 tableNorm = make_float4(normalize(make_float3(tableNormX,tableNormY,tableNormZ)),0.f);
@@ -1226,30 +1276,30 @@ int main() {
             float totalPerPointError = optimizer.getErrPerObsPoint(1,0) + optimizer.getErrPerModPoint(1,0);
 
             switch (trackingMode) {
-            case ModeObjOnTable:
-                if (anyContact || totalPerPointError > resetInfoThreshold) {
-                    trackingMode = ModeIntermediate;
-                    tracker.getDampingMatrix(1) = Eigen::MatrixXf::Zero(6,6);
-                }
-                break;
-            case ModeIntermediate:
-                if (totalPerPointError < stabilityThreshold) {
-                    if (anyContact) {
-                        bool contactRight = false;
-                        for (int i=0; i<5; ++i) { contactRight = contactRight || *contactVars[i]; }
-                        trackingMode = (contactRight ? ModeObjGrasped : ModeObjGraspedLeft);
-                    } else {
-                        trackingMode = ModeObjOnTable;
+                case ModeObjOnTable:
+                    if (anyContact || totalPerPointError > resetInfoThreshold) {
+                        trackingMode = ModeIntermediate;
+                        tracker.getDampingMatrix(1) = Eigen::MatrixXf::Zero(6,6);
                     }
-                }
-                break;
-            case ModeObjGrasped:
-            case ModeObjGraspedLeft:
-                if (!anyContact || totalPerPointError > resetInfoThreshold) {
-                    trackingMode = ModeIntermediate;
-                    tracker.getDampingMatrix(1) = Eigen::MatrixXf::Zero(6,6);
-                }
-                break;
+                    break;
+                case ModeIntermediate:
+                    if (totalPerPointError < stabilityThreshold) {
+                        if (anyContact) {
+                            bool contactRight = false;
+                            for (int i=0; i<5; ++i) { contactRight = contactRight || *contactVars[i]; }
+                            trackingMode = (contactRight ? ModeObjGrasped : ModeObjGraspedLeft);
+                        } else {
+                            trackingMode = ModeObjOnTable;
+                        }
+                    }
+                    break;
+                case ModeObjGrasped:
+                case ModeObjGraspedLeft:
+                    if (!anyContact || totalPerPointError > resetInfoThreshold) {
+                        trackingMode = ModeIntermediate;
+                        tracker.getDampingMatrix(1) = Eigen::MatrixXf::Zero(6,6);
+                    }
+                    break;
             }
 
         } else {

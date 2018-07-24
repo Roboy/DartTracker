@@ -71,7 +71,7 @@ int add_all_models(char* path, dart::Tracker *tracker){
             else
                 ROS_INFO("\nFailed to load: %s\n", modelpath);
         }catch(std::exception e) {
-            ROS_INFO(e.what());
+            //ROS_INFO(e.what());
         }
     }
     for( it = subpaths.begin(); it != subpaths.end() ; ++it){
@@ -205,10 +205,9 @@ int main(int argc, char *argv[]){
         pointcloud_msg.header.seq = seq++;
         pointcloud_msg.header.stamp = ros::Time::now();
         realsense_depth_pub.publish(pointcloud_msg);
-
-        /*Some stuff (?)*/
         tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
 
+        //some stuff
         opts.lambdaIntersection[0 + 3*0] = lambdaIntersection; // right
         opts.lambdaIntersection[2 + 3*2] = lambdaIntersection; // left
 
@@ -260,8 +259,8 @@ int main(int argc, char *argv[]){
 //    infoLog.Log(errPerObsPoint,errPerObsPoint+errPerModPoint,stabilityThreshold,resetInfoThreshold);
         // update poses (?)
         for (int m = 0; m < tracker->getNumModels(); ++m) {
-            printf(tracker->getModel(m).getName().c_str());
-            printf("\ngeometry scale: %f\n", tracker->getModel(m).getGeometryScale(0));
+            //printf(tracker->getModel(m).getName().c_str());
+            //printf("\ngeometry scale: %f\n", tracker->getModel(m).getGeometryScale(0));
             for (int i = 0; i < tracker->getPose(m).getReducedArticulatedDimensions(); ++i) {
                 poseVars[m][i + 6] = tracker->getPose(m).getReducedArticulation()[i];
             }
