@@ -248,10 +248,19 @@ public:
 private:
     void readDepth(){
         depth_frame = reinterpret_cast<const DepthType *>(realsense_dev->get_frame_data(rs::stream::depth));
+        //TODO: memcpy needed?
+#ifdef CUDA_BUILD
+        memcpy((void *) _depthData->hostPtr(), depth_frame, this->_depthWidth * this->_depthHeight * sizeof(uint16_t));
+#else
+        memcpy((void *) _depthData, depth_frame, this->_depthWidth * this->_depthHeight* sizeof(uint16_t));
+#endif
     };
 
     void readColor(){
         color_frame = reinterpret_cast<const ColorType *>(realsense_dev->get_frame_data(rs::stream::color));
+        //TODO: memcpy needed?
+        //memcpy((void *) _colorData, color_frame, this->_colorWidth * this->_colorHeight * sizeof(uchar3));
+        _colorData = const_cast<ColorType *>(color_frame);
     };
 
 #ifdef CUDA_BUILD

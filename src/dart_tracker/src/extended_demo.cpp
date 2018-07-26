@@ -29,7 +29,7 @@
 #include "visualization/sdf_viz.h"
 
 
-//#define REALSENSE
+#define REALSENSE
 
 #ifdef REALSENSE
 #include "dart_tracker/dartTracker.hpp"
@@ -111,8 +111,6 @@ void loadReportedJointAnglesAndContacts(std::string jointAngleFile, std::string 
 
 }
 #endif
-const float colours[15] = {0,0,0.1, 0.2, 0.2, 0, 0.4, 0, 0.4, 0.8, 0, 0, 0, 1, 1};
-const int colour_num = 5;
 
 std::string getTrackingModeString(const TrackingMode mode) {
     switch (mode) {
@@ -136,10 +134,12 @@ void setSlidersFromTransform(dart::SE3& transform, pangolin::Var<float>** slider
     *sliders[4] = t.p[4];
     *sliders[5] = t.p[5];
 }
+
 void setSlidersFromTransform(const dart::SE3& transform, pangolin::Var<float>** sliders) {
     dart::SE3 mutableTransform = transform;
     setSlidersFromTransform(mutableTransform,sliders);
 }
+
 const static dart::SE3 T_wh = dart::SE3FromRotationY(M_PI)*dart::SE3FromRotationX(-M_PI_2)*dart::SE3FromTranslation(make_float3(0,0,0.138));//dart::SE3Fromse3(dart::se3(0,0,0.1,0,2.22144,2.22144)); //dart::SE3art::SE3Fromse3(dart::se3(0, 0.108385,-0.108385, 1.5708, 0, 0)); // = dart::SE3Invert(dart::SE3Fromse3(dart::se3(0, 0.115, -0.115, 1.5708, 0, 0)));
 const static dart::SE3 T_hw = dart::SE3Invert(T_wh);
 const static dart::SE3 T_wc = dart::SE3FromTranslation(make_float3(-0.2,0.8,0))*
@@ -436,7 +436,6 @@ int main() {
         allSdfColors.hostPtr()[m] = tracker.getModel(m).getDeviceSdfColors();
     }
     allSdfColors.syncHostToDevice();
-
 #ifdef REALSENSE
     //TODO: which values to use???
     //float colors[depthHeight * depthWidth * sizeof(uchar)] = depthSource;
@@ -455,15 +454,21 @@ int main() {
     // set up VBO to display point cloud
     //GL unsigned integer type
     GLuint pointCloudVbo,pointCloudColorVbo,pointCloudNormVbo;
+    //generates buffer
     glGenBuffersARB(1,&pointCloudVbo);
+    //makes buffer accessible
     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudVbo);
+    // stores data in array: Use DYNAMIC_DRAW when the data store contents will be modified repeatedly and used many times.
     glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostVertMap(),GL_DYNAMIC_DRAW_ARB);
+
     glGenBuffersARB(1,&pointCloudColorVbo);
     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudColorVbo);
     glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),imgDepthSize.hostPtr(),GL_DYNAMIC_DRAW_ARB);
+
     glGenBuffersARB(1,&pointCloudNormVbo);
     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
     glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
+
 #endif
 
     dart::OptimizationOptions & opts = tracker.getOptions();
@@ -573,7 +578,7 @@ int main() {
         waitKey(1);
 
         depthSource->generatePointCloud(pointcloud);
-        /*Get and publish point cloud. This can be displayed in RVIZ to see what the camera perceives (depth and color)
+        //Get and publish point cloud. This can be displayed in RVIZ to see what the camera perceives (depth and color)
         static uint seq = 0;
         sensor_msgs::PointCloud2 pointcloud_msg;
         pcl::toROSMsg(*pointcloud,pointcloud_msg);
@@ -582,7 +587,7 @@ int main() {
         pointcloud_msg.header.stamp = ros::Time::now();
         realsense_depth_pub.publish(pointcloud_msg);
         tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
-        END REALSENSE*/
+        //END REALSENSE*/
 #endif
         if (pangolin::HasResized()) {
             pangolin::DisplayBase().ActivateScissorAndClear();
@@ -853,20 +858,32 @@ int main() {
             }
         }
 
+
+        float4* testvertical = const_cast<float4 *>(tracker.getHostVertMap());
+        float4 *testnormal = const_cast<float4 *>(tracker.getHostNormMap());
+        uchar3 *testpoints = imgDepthSize.hostPtr();
+
         if (showTrackedPoints) {
 
             glPointSize(4.0f);
             glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudVbo);
             glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostVertMap(),GL_DYNAMIC_DRAW_ARB);
-
+            //specifies buffer to contain vertices, used during drawarray()
             glEnableClientState(GL_VERTEX_ARRAY);
             glDisableClientState(GL_NORMAL_ARRAY);
+            //defines array of vertex data:
+            //(1) size: number of coords p. vertex elem {2,3,4}
+            //(2) type: type of each coord of the array,
+            //(3) offset: betw. consecutive vertices
+            //(4) pointer: at first coord
             glVertexPointer(4, GL_FLOAT, 0, 0);
 
             switch (pointColoringObs) {
                 case PointColoringNone:
-                    glColor3f(0.25,0.25,0.25);
+                    //shows spoints which are given from depthsouce?
+                    glColor3f(0.25,1,0.25);
                     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
+                    testnormal = const_cast<float4 *>(tracker.getHostNormMap());
                     glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
 
                     glNormalPointer(GL_FLOAT, 4*sizeof(float), 0);
@@ -909,7 +926,7 @@ int main() {
                 }
                     break;
             }
-
+            //This transforms the previously defined buffers into the points seen in the application
             glDrawArrays(GL_POINTS,0,depthWidth*depthHeight);
             glBindBuffer(GL_ARRAY_BUFFER_ARB,0);
 
@@ -920,6 +937,7 @@ int main() {
             glPointSize(1.0f);
 
         }
+
 
         static pangolin::Var<bool> showFingerContacts("ui.showContacts",true,true);
         if (showFingerContacts) {
@@ -945,7 +963,6 @@ int main() {
             glEnd();
 
         }
-
         if (showPredictedPoints) {
 
             glPointSize(4.0f);
