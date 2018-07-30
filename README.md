@@ -24,10 +24,10 @@ __IMPORTANT__: Delete `/usr/local/cuda-8.0/samples/common/inc/GL/glew.h` and/or 
 
 ## Environment Setup
 
-Build the repository in order to have the files needed in the following steps (adapt paths).
+Build the repository in order to have the files needed in the following steps (adapt paths). The build directive enables easier debugging when working with the built
  
 	cd /path/to/DartTracker/
-	catkin_make
+	catkin_make -DCMAKE_BUILD_TYPE=Debug 
 
 Source the environment (adapt the path) and add the uvcvideo to the kernel: 
 

@@ -17,45 +17,47 @@ using namespace dart;
 template <typename DepthType, typename ColorType>
 class DartRealSense:public DepthSource<DepthType,ColorType> {
 public:
-    DartRealSense<DepthType,ColorType>(): DepthSource<DepthType,ColorType>(){
-            realsense_ctx = boost::shared_ptr<rs::context>(new rs::context);
-            ROS_INFO("There are %d connected RealSense devices.\n", realsense_ctx->get_device_count());
-            if(realsense_ctx->get_device_count() == 0) {
-                ROS_ERROR("no realsense connected");
-                return;
-            }else{
-                realsense_dev = realsense_ctx->get_device(0);
-                ROS_INFO("\nUsing device 0, an %s\n     Serial number: %s\n     Firmware version: %s\n",
-                         realsense_dev->get_name(), realsense_dev->get_serial(), realsense_dev->get_firmware_version());
+    DartRealSense<DepthType,ColorType>(int width=640, int height=480): DepthSource<DepthType,ColorType>(){
+        realsense_ctx = boost::shared_ptr<rs::context>(new rs::context);
+        ROS_INFO("There are %d connected RealSense devices.\n", realsense_ctx->get_device_count());
+        if(realsense_ctx->get_device_count() == 0) {
+            ROS_ERROR("no realsense connected");
+            return;
+        }else{
+            realsense_dev = realsense_ctx->get_device(0);
+            ROS_INFO("\nUsing device 0, an %s\n     Serial number: %s\n     Firmware version: %s\n",
+                     realsense_dev->get_name(), realsense_dev->get_serial(), realsense_dev->get_firmware_version());
 
-                this->_depthWidth = 640;
-                this->_depthHeight = 480;
-                this->_hasColor = true;
+            this->_depthWidth = width;
+            this->_depthHeight = height;
+            this->_hasColor = true;
 
-                // Configure all streams to run at VGA resolution at 60 frames per second
-                realsense_dev->enable_stream(rs::stream::depth, 640, 480, rs::format::z16, 60);
-                realsense_dev->enable_stream(rs::stream::color, 640, 480, rs::format::rgb8, 60);
-                realsense_dev->enable_stream(rs::stream::infrared, 640, 480, rs::format::y8, 60);
-                try { realsense_dev->enable_stream(rs::stream::infrared2, 640, 480, rs::format::y8, 60); }
-                catch(...) { ROS_WARN("Device does not provide infrared2 stream.\n"); }
+            // Configure all streams to run at VGA resolution at 60 frames per second
+            realsense_dev->enable_stream(rs::stream::depth, width, height, rs::format::z16, 60);
+            realsense_dev->enable_stream(rs::stream::color, width, height, rs::format::rgb8, 60);
+            realsense_dev->enable_stream(rs::stream::infrared, width, height, rs::format::y8, 60);
+            try { realsense_dev->enable_stream(rs::stream::infrared2, width, height, rs::format::y8, 60); }
+            catch(...) { ROS_WARN("Device does not provide infrared2 stream.\n"); }
 
-                depth_intrin     = realsense_dev->get_stream_intrinsics( rs::stream::depth );
-                depth_to_color   = realsense_dev->get_extrinsics( rs::stream::depth, rs::stream::color );
-                color_intrin     = realsense_dev->get_stream_intrinsics( rs::stream::color );
+            depth_intrin     = realsense_dev->get_stream_intrinsics( rs::stream::depth );
+            depth_to_color   = realsense_dev->get_extrinsics( rs::stream::depth, rs::stream::color );
+            color_intrin     = realsense_dev->get_stream_intrinsics( rs::stream::color );
 
-                this->_focalLength = make_float2(depth_intrin.fx, depth_intrin.fy);
+            this->_focalLength = make_float2(depth_intrin.fx, depth_intrin.fy);
 
-                realsense_dev->start();
+            realsense_dev->start();
 
-                // Determine depth value corresponding to one meter
-                _scaleToMeters = 1.0f / realsense_dev->get_depth_scale();
+            // Determine depth value corresponding to one meter
+            _scaleToMeters = realsense_dev->get_depth_scale();
 
 #ifdef CUDA_BUILD
-                _depthData = new MirroredVector<DepthType>(this->_depthWidth*this->_depthHeight);
+            _depthData = new MirroredVector<DepthType>(this->_depthWidth*this->_depthHeight);
 #else
-                _depthData = new DepthType[this->_depthWidth*this->_depthHeight];
+            _depthData = new DepthType[this->_depthWidth*this->_depthHeight];
 #endif // CUDA_BUILD
-            }
+            //fill data with initial content
+            advance();
+        }
     };
 
     ~DartRealSense(){
@@ -130,33 +132,32 @@ public:
             {
 
                 // Second, iterate across rows
-                for( int dx = 0; dx < dw; dx++ )
-                {
+                for( int dx = 0; dx < dw; dx++ ) {
                     uint i = dy * dw + dx;
-                    uint16_t depth_value = depth_frame[ i ];
+                    ushort depth_value = depth_frame[i];
 
-                    if( depth_value == 0 )
+                    if (depth_value == 0)
                         continue;
 
-                    rs::float2 depth_pixel = { (float)dx, (float)dy };
-                    float depth_in_meters = depth_value /_scaleToMeters;
+                    rs::float2 depth_pixel = {(float) dx, (float) dy};
+                    float depth_in_meters = depth_value * _scaleToMeters;
 
                     // since depth cam and rgb cam have physical offset, the depth-coords need to be transformed to obtain the correct colour values
-                    rs::float3 depth_point = depth_intrin.deproject( depth_pixel, depth_in_meters );
+                    rs::float3 depth_point = depth_intrin.deproject(depth_pixel, depth_in_meters);
                     rs::float3 color_point = depth_to_color.transform(depth_point);
                     rs::float2 color_pixel = color_intrin.project(color_point);
                     //Clamp since transformation sometimes exceeds boundaries & round since indices int
-                    const int cx = clamp(( int )std::round( color_pixel.x ), 0, dw-1);
-                    const int cy = clamp(( int )std::round( color_pixel.y ), 0, dh-1);
+                    const int cx = clamp((int) std::round(color_pixel.x), 0, dw - 1);
+                    const int cy = clamp((int) std::round(color_pixel.y), 0, dh - 1);
 
-                    static const float nan = std::numeric_limits<float>::quiet_NaN( );
+                    static const float nan = std::numeric_limits<float>::quiet_NaN();
 
                     // Set up logic to remove bad points
                     bool depth_fail;
                     bool color_fail;
 
-                    depth_fail = ( depth_point.z > NOISY );
-                    color_fail = ( cx < 0 || cy < 0 || cx > color_intrin.width || cy > color_intrin.height );
+                    depth_fail = (depth_point.z > NOISY);
+                    color_fail = (cx < 0 || cy < 0 || cx > color_intrin.width || cy > color_intrin.height);
 
                     // ==== Cloud Input Pointers ====
 
@@ -165,27 +166,27 @@ public:
                     float *dp_y;
                     float *dp_z;
 
-                    dp_x = &( rs_cloud_ptr->points[ i ].x );
-                    dp_y = &( rs_cloud_ptr->points[ i ].y );
-                    dp_z = &( rs_cloud_ptr->points[ i ].z );
+                    dp_x = &(rs_cloud_ptr->points[i].x);
+                    dp_y = &(rs_cloud_ptr->points[i].y);
+                    dp_z = &(rs_cloud_ptr->points[i].z);
 
                     // RGB input access to cloud
                     uint8_t *cp_r;
                     uint8_t *cp_g;
                     uint8_t *cp_b;
 
-                    cp_r = &( rs_cloud_ptr->points[ i ].r );
-                    cp_g = &( rs_cloud_ptr->points[ i ].g );
-                    cp_b = &( rs_cloud_ptr->points[ i ].b );
+                    cp_r = &(rs_cloud_ptr->points[i].r);
+                    cp_g = &(rs_cloud_ptr->points[i].g);
+                    cp_b = &(rs_cloud_ptr->points[i].b);
 
                     // ==== Cloud Input Data ====
                     // Set up depth point data
-                    float real_x        = 0;
-                    float real_y        = 0;
-                    float real_z        = 0;
-                    float adjusted_x    = 0;
-                    float adjusted_y    = 0;
-                    float adjusted_z    = 0;
+                    float real_x = 0;
+                    float real_y = 0;
+                    float real_z = 0;
+                    float adjusted_x = 0;
+                    float adjusted_y = 0;
+                    float adjusted_z = 0;
 
                     real_x = depth_point.x;
                     real_y = depth_point.y;
@@ -197,38 +198,35 @@ public:
                     adjusted_z = real_z;
 
                     // Set up color point data
-                    int offset_val = ( cy * dw + cx ) * 3;
-                    const uint8_t *offset = ( (const uint8_t*)color_frame + ( cy * dw + cx ) * 3 );
+                    int offset_val = (cy * dw + cx) * 3;
+                    const uint8_t *offset = ((const uint8_t *) color_frame + (cy * dw + cx) * 3);
 
-                    uint8_t raw_r       = 0;
-                    uint8_t raw_g       = 0;
-                    uint8_t raw_b       = 0;
-                    uint8_t adjusted_r  = 0;
-                    uint8_t adjusted_g  = 0;
-                    uint8_t adjusted_b  = 0;
+                    uint8_t raw_r = 0;
+                    uint8_t raw_g = 0;
+                    uint8_t raw_b = 0;
+                    uint8_t adjusted_r = 0;
+                    uint8_t adjusted_g = 0;
+                    uint8_t adjusted_b = 0;
 
-                    raw_r = *( offset );
-                    raw_g = *( offset + 1 );
-                    raw_b = *( offset + 2 );
+                    raw_r = *(offset);
+                    raw_g = *(offset + 1);
+                    raw_b = *(offset + 2);
 
                     // Adjust color arbitrarily
                     adjusted_r = raw_r;
                     adjusted_g = raw_g;
                     adjusted_b = raw_b;
 
-
                     // ==== Cloud Point Evaluation ====
                     // If bad point, remove & skip
-                    if( depth_fail || color_fail )
-                    {
+                    if (depth_fail || color_fail) {
                         *dp_x = *dp_y = *dp_z = (float) nan;
                         *cp_r = *cp_g = *cp_b = 0;
                         continue;
                     }
 
                         // If valid point, add data to cloud
-                    else
-                    {
+                    else {
                         // Fill in cloud depth
                         *dp_x = adjusted_x;
                         *dp_y = adjusted_y;
@@ -238,6 +236,7 @@ public:
                         *cp_r = adjusted_r;
                         *cp_g = adjusted_g;
                         *cp_b = adjusted_b;
+
                     }
                 }
             }
@@ -248,19 +247,29 @@ public:
 private:
     void readDepth(){
         depth_frame = reinterpret_cast<const DepthType *>(realsense_dev->get_frame_data(rs::stream::depth));
-        //TODO: memcpy needed?
 #ifdef CUDA_BUILD
-        memcpy((void *) _depthData->hostPtr(), depth_frame, this->_depthWidth * this->_depthHeight * sizeof(uint16_t));
+        //memcpy((unsigned char*) _depthData->hostPtr(), depth_frame, this->_depthWidth * this->_depthHeight);
+        for(int y = 0; y < this->_depthHeight; y ++){
+            memcpy(_depthData->hostPtr() + y * this->_depthWidth, // start of row
+                   depth_frame + this->_depthWidth * (this->_depthHeight - y -1),  // start of row from bottom to top
+                   this->_depthWidth); // one
+        }
 #else
-        memcpy((void *) _depthData, depth_frame, this->_depthWidth * this->_depthHeight* sizeof(uint16_t));
+        for(int y = 0; y < this->_depthHeight; y ++){
+            memcpy(_depthData + y * this->_depthWidth, // dest: start of row
+             depth_frame + this->_depthWidth * (this->_depthHeight - y -1),  // src: start of row from bottom to top
+             this->_depthWidth); // one
+        }
+        //memcpy(unsigned char*) _depthData, depth_frame, this->_depthWidth * this->_depthHeight);
 #endif
     };
-
     void readColor(){
         color_frame = reinterpret_cast<const ColorType *>(realsense_dev->get_frame_data(rs::stream::color));
-        //TODO: memcpy needed?
-        //memcpy((void *) _colorData, color_frame, this->_colorWidth * this->_colorHeight * sizeof(uchar3));
-        _colorData = const_cast<ColorType *>(color_frame);
+        for(int y = 0; y < this->_colorHeight; y ++){
+            memcpy(_colorData + y * this->_colorWidth, // dest: start of row
+                   color_frame + this->_colorWidth * (this->_colorHeight - y -1),  // src: start of row from bottom to top
+                   this->_colorWidth); // one
+        }
     };
 
 #ifdef CUDA_BUILD

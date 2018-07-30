@@ -234,8 +234,8 @@ int main() {
     //ros and rviz related
     ros::NodeHandlePtr nh = ros::NodeHandlePtr(new ros::NodeHandle);
 
-    ros::Publisher realsense_image_pub = nh->advertise<sensor_msgs::Image>("src/DartTracker/realsense_color", 1);
-    ros::Publisher realsense_depth_pub = nh->advertise<PointCloud>("src/DartTracker/realsense_depth", 1);
+    ros::Publisher realsense_image_pub = nh->advertise<sensor_msgs::Image>("DartTracker/realsense_color", 1);
+    ros::Publisher realsense_depth_pub = nh->advertise<PointCloud>("DartTracker/realsense_depth", 1);
 
     boost::shared_ptr<ros::AsyncSpinner> spinner = boost::shared_ptr<ros::AsyncSpinner>(new ros::AsyncSpinner(1));
     spinner->start();
@@ -244,7 +244,7 @@ int main() {
     tf::TransformBroadcaster tf_broadcaster;
 
     //---- OTHER DEPTH SOURCE --- multiple depth source not supported yet -> change order, first one gets priority
-    DartRealSense<uint16_t,uchar3> *depthSource = new DartRealSense<uint16_t,uchar3>();
+    DartRealSense<uint16_t,uchar3> *depthSource = new DartRealSense<uint16_t,uchar3>(640, 480);
     tracker.addDepthSource(depthSource);
 
     const int depthWidth = depthSource->getDepthWidth();
@@ -256,7 +256,6 @@ int main() {
     realsense_tf.setRotation(quat);
 
     //visualisation
-    Mat image = Mat();
 #else
     dart::ImageDepthSource<ushort,uchar3> * depthSource = new dart::ImageDepthSource<ushort,uchar3>();
     // initialize depth source
@@ -272,6 +271,7 @@ int main() {
 #endif
     // ----
 
+    Mat image = Mat();
     dart::Optimizer & optimizer = *tracker.getOptimizer();
 
     const static int obsSdfSize = 64;
@@ -436,21 +436,7 @@ int main() {
         allSdfColors.hostPtr()[m] = tracker.getModel(m).getDeviceSdfColors();
     }
     allSdfColors.syncHostToDevice();
-#ifdef REALSENSE
-    //TODO: which values to use???
-    //float colors[depthHeight * depthWidth * sizeof(uchar)] = depthSource;
-    //float positions[depthHeight * depthWidth * sizeof(float4)] = depthSource->generatePointCloud();
-    GLuint pointCloudVbo,pointCloudColorVbo,pointCloudNormVbo;
-    glGenBuffersARB(1,&pointCloudVbo);
-    glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudVbo);
-    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),imgDepthSize.hostPtr(),GL_DYNAMIC_DRAW_ARB);
-    glGenBuffersARB(1,&pointCloudColorVbo);
-    glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudColorVbo);
-    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),imgDepthSize.hostPtr(),GL_DYNAMIC_DRAW_ARB);
-    glGenBuffersARB(1,&pointCloudNormVbo);
-    glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
-    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
-#else
+
     // set up VBO to display point cloud
     //GL unsigned integer type
     GLuint pointCloudVbo,pointCloudColorVbo,pointCloudNormVbo;
@@ -459,7 +445,7 @@ int main() {
     //makes buffer accessible
     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudVbo);
     // stores data in array: Use DYNAMIC_DRAW when the data store contents will be modified repeatedly and used many times.
-    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostVertMap(),GL_DYNAMIC_DRAW_ARB);
+    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4), tracker.getHostVertMap(),GL_DYNAMIC_DRAW_ARB); //NULL, GL_DYNAMIC_DRAW_ARB);
 
     glGenBuffersARB(1,&pointCloudColorVbo);
     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudColorVbo);
@@ -468,8 +454,6 @@ int main() {
     glGenBuffersARB(1,&pointCloudNormVbo);
     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
     glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
-
-#endif
 
     dart::OptimizationOptions & opts = tracker.getOptions();
     opts.lambdaObsToMod = 1;
@@ -541,6 +525,9 @@ int main() {
     spaceJustinPose.setTransformModelToCamera(initialT_cj);
     spaceJustinPose.projectReducedToFull();
     spaceJustin.setPose(spaceJustinPose);
+
+    //enable tracking by default
+    trackFromVideo = true;
 #endif
 
 
@@ -569,13 +556,18 @@ int main() {
 
     // ------------------- main loop ---------------------
     for (int pangolinFrame=1; !pangolin::ShouldQuit(); ++pangolinFrame) {
+
 #ifdef REALSENSE
         /*REALSENSE STUFF*/
         depthSource->advance();
+
         image.release();
-        image = Mat(480, 640, CV_8UC3, (uint8_t*)depthSource->color_frame);
-        imshow("camera", image);
-        waitKey(1);
+        //important: first height, then width
+        //multiply depth values by ten to be able to see it
+        //image = cv::Mat(480, 640, CV_16U, (uint16_t*) depthSource->getDepth());
+        image = cv::Mat(480, 640, CV_8UC3, (uint8_t*)depthSource->color_frame);
+        cv::imshow("camera", image);
+        cv::waitKey(1);
 
         depthSource->generatePointCloud(pointcloud);
         //Get and publish point cloud. This can be displayed in RVIZ to see what the camera perceives (depth and color)
@@ -588,6 +580,13 @@ int main() {
         realsense_depth_pub.publish(pointcloud_msg);
         tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
         //END REALSENSE*/
+
+#else
+        image.release();
+        //image = cv::Mat(240, 320,CV_16U, (uint16_t*) depthSource->getDepth());
+        image = cv::Mat(240, 320, CV_8UC3, (uint8_t*)depthSource->color_frame);
+        cv::imshow("camera", image);
+        cv::waitKey(1);
 #endif
         if (pangolin::HasResized()) {
             pangolin::DisplayBase().ActivateScissorAndClear();
@@ -858,17 +857,12 @@ int main() {
             }
         }
 
-
-        float4* testvertical = const_cast<float4 *>(tracker.getHostVertMap());
-        float4 *testnormal = const_cast<float4 *>(tracker.getHostNormMap());
-        uchar3 *testpoints = imgDepthSize.hostPtr();
-
         if (showTrackedPoints) {
 
             glPointSize(4.0f);
             glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudVbo);
-            glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostVertMap(),GL_DYNAMIC_DRAW_ARB);
-            //specifies buffer to contain vertices, used during drawarray()
+            glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4), tracker.getHostVertMap(),GL_DYNAMIC_DRAW_ARB); //NULL, GL_DYNAMIC_DRAW_ARB);
+            //specifies buffer to contain vertices, important to know for drawarray()
             glEnableClientState(GL_VERTEX_ARRAY);
             glDisableClientState(GL_NORMAL_ARRAY);
             //defines array of vertex data:
@@ -883,7 +877,6 @@ int main() {
                     //shows spoints which are given from depthsouce?
                     glColor3f(0.25,1,0.25);
                     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudNormVbo);
-                    testnormal = const_cast<float4 *>(tracker.getHostNormMap());
                     glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(float4),tracker.getHostNormMap(),GL_DYNAMIC_DRAW_ARB);
 
                     glNormalPointer(GL_FLOAT, 4*sizeof(float), 0);
@@ -926,7 +919,7 @@ int main() {
                 }
                     break;
             }
-            //This transforms the previously defined buffers into the points seen in the application
+            //This transforms the previously defined buffers into the points seen in the application and draws these
             glDrawArrays(GL_POINTS,0,depthWidth*depthHeight);
             glBindBuffer(GL_ARRAY_BUFFER_ARB,0);
 
