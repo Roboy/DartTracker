@@ -160,7 +160,7 @@ int main() {
     const float objObsSdfRes = 0.0025;
     const float3 objObsSdfOffset = make_float3(0,0,0);
 
-    const std::string videoLoc = "../video/";
+    const std::string videoLoc = "../video";
 
     // -=-=-=- initializations -=-=-=-
     cudaSetDevice(0);
