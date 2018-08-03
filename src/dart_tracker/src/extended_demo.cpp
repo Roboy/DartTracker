@@ -29,7 +29,7 @@
 #include "visualization/sdf_viz.h"
 
 
-//#define REALSENSE
+#define REALSENSE
 #define SHOWDEPTH true
 
 #ifdef REALSENSE
@@ -181,7 +181,7 @@ static float3 initialTableNorm = make_float3(0.0182391, 0.665761, -0.745942);
 static float initialTableIntercept = -0.705196;
 
 int main() {
-    const std::string objectModelFile = "src/dart_tracker/models/mug/mug.xml"; //"src/dartExample/models/ikeaMug/ikeaMug.xml";//
+    const std::string objectModelFile = "src/dartExample/models/ikeaMug/ikeaMug.xml";//"src/dart_tracker/models/mug/mug.xml"; //
     const float objObsSdfRes = 0.0025;
     const float3 objObsSdfOffset = make_float3(0,0,0);
 
@@ -344,7 +344,7 @@ int main() {
                      make_float3(-0.5*obsSdfSize*obsSdfResolution) + obsSdfOffset,
                      handPoseReduction);
 
-    tracker.addModel("src/dart_tracker/models/mug/mug.xml",
+    tracker.addModel("src/dart_tracker/models/xylophone_small/xylophone_small.xml",
                      0.5*modelSdfResolution,
                      modelSdfPadding,
                      64);
