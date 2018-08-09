@@ -29,163 +29,12 @@
 #include "visualization/sdf_viz.h"
 #include "geometry_msgs/Pose.h"
 
-//#define REALSENSE
 #define SHOWDEPTH true
 
 
-#ifdef REALSENSE
 #include "dart_tracker/dartTracker.hpp"
-#else
-#include <opencv2/core/core.hpp>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/highgui/highgui.hpp>
-
-// ros
-#include <ros/ros.h>
-#include <rviz/panel.h>
-#include <pluginlib/class_loader.h>
-#include <pluginlib/class_list_macros.h>
-#include <visualization_msgs/Marker.h>
-#include <std_srvs/SetBool.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud.h>
-
-#include <pcl_ros/point_cloud.h>
-#include <pcl/point_types.h>
-
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudRGB;
-
-#include <tf/tf.h>
-#include <tf/transform_broadcaster.h>
-#include <tf_conversions/tf_eigen.h>
-
-
-#include <Eigen/Geometry>
-#include <Eigen/Core>
-#endif
-
-#define EIGEN_DONT_ALIGN
 
 using namespace std;
-
-#ifndef REALSENSE
-enum PointColorings {
-    PointColoringNone = 0,
-    PointColoringRGB,
-    PointColoringErr,
-    PointColoringDA,
-    NumPointColorings
-};
-
-enum DebugImgs {
-    DebugColor=0,
-    DebugObsDepth,
-    DebugPredictedDepth,
-    DebugObsToModDA,
-    DebugModToObsDA,
-    DebugObsToModErr,
-    DebugModToObsErr,
-    DebugJTJ,
-    DebugN
-};
-
-enum TrackingMode {
-    ModeObjOnTable,
-    ModeIntermediate,
-    ModeObjGrasped,
-    ModeObjGraspedLeft
-};
-const static int panelWidth = 180;
-
-static const int fullArmFingerTipFrames[10] = { 11, 15, 19, 23, 27,  38, 42, 46, 50, 54 };
-static const int handFingerTipFrames[5] = { 4, 8, 12, 16, 20 };
-void loadReportedJointAnglesAndContacts(std::string jointAngleFile, std::string contactFile,
-                                        std::vector<float *> & jointAngles, std::vector<int *> & contacts) {
-
-    int nFrames, nContactFrames;
-    int nJoints;
-
-    std::ifstream jointAngleStream, contactStream;
-    jointAngleStream.open(jointAngleFile);
-    contactStream.open(contactFile);
-
-    assert(jointAngleStream.is_open());
-    assert(contactStream.is_open());
-
-    jointAngleStream >> nFrames;
-    contactStream >> nContactFrames;
-
-    assert(nFrames == nContactFrames);
-
-    jointAngleStream >> nJoints;
-
-    for (int i=0; i<nFrames; ++i) {
-
-        float * frameAngles = new float[nJoints];
-        for (int j=0; j<nJoints; ++j) {
-            jointAngleStream >> frameAngles[j];
-        }
-        jointAngles.push_back(frameAngles);
-
-        int * frameContacts = new int[10];
-        for (int j=0; j<10; ++j) {
-            contactStream >> frameContacts[j];
-        }
-        contacts.push_back(frameContacts);
-
-    }
-
-    jointAngleStream.close();
-    contactStream.close();
-
-}
-#endif
-
-std::string getTrackingModeString(const TrackingMode mode) {
-    switch (mode) {
-        case ModeObjOnTable:
-            return "object on table";
-        case ModeIntermediate:
-            return "intermediate";
-        case ModeObjGrasped:
-            return "object grasped";
-        case ModeObjGraspedLeft:
-            return "object grasped in left hand";
-    }
-}
-
-void setSlidersFromTransform(dart::SE3& transform, pangolin::Var<float>** sliders) {
-    *sliders[0] = transform.r0.w; transform.r0.w = 0;
-    *sliders[1] = transform.r1.w; transform.r1.w = 0;
-    *sliders[2] = transform.r2.w; transform.r2.w = 0;
-    dart::se3 t = dart::se3FromSE3(transform);
-    *sliders[3] = t.p[3];
-    *sliders[4] = t.p[4];
-    *sliders[5] = t.p[5];
-}
-
-void setSlidersFromTransform(const dart::SE3& transform, pangolin::Var<float>** sliders) {
-    dart::SE3 mutableTransform = transform;
-    setSlidersFromTransform(mutableTransform,sliders);
-}
-
-const static dart::SE3 T_wh = dart::SE3FromRotationY(M_PI)*dart::SE3FromRotationX(-M_PI_2)*dart::SE3FromTranslation(make_float3(0,0,0.138));//dart::SE3Fromse3(dart::se3(0,0,0.1,0,2.22144,2.22144)); //dart::SE3art::SE3Fromse3(dart::se3(0, 0.108385,-0.108385, 1.5708, 0, 0)); // = dart::SE3Invert(dart::SE3Fromse3(dart::se3(0, 0.115, -0.115, 1.5708, 0, 0)));
-const static dart::SE3 T_hw = dart::SE3Invert(T_wh);
-const static dart::SE3 T_wc = dart::SE3FromTranslation(make_float3(-0.2,0.8,0))*
-                              dart::SE3Fromse3(dart::se3(0,0,0,0,M_PI_2,0))*
-                              dart::SE3Fromse3(dart::se3(0,0,0, 2.1,0,0));
-
-const static int rightShoulderFrame = 1;
-const static int rightPalmFrame = 7;
-const static int leftShoulderFrame = 28;
-const static int leftPalmFrame = 34;
-const static int headFrame = 56;
-
-//initial coords justin?
-static const dart::SE3 initialT_cj(make_float4(-0.476295, -0.0945505, -0.874187, -0.22454),
-                                   make_float4(-0.625852, 0.734788, 0.26152, -0.305038   ),
-                                   make_float4(0.617613, 0.671677, -0.409147, -0.105219  ));
 
 //initial coords object?
 static const dart::SE3 initialT_co(make_float4(0.262348, -0.955909, -0.131952, 0.0238097),
@@ -198,7 +47,6 @@ static float3 initialTableNorm = make_float3(0.0182391, 0.665761, -0.745942);
 static float initialTableIntercept = -0.705196;
 
 int main() {
-    const std::string objectModelFile = "src/dartExample/models/ikeaMug/ikeaMug.xml";//"src/dart_tracker/models/mug/mug.xml"; //
     const float objObsSdfRes = 0.0025;
     const float3 objObsSdfOffset = make_float3(0,0,0);
 
@@ -250,8 +98,6 @@ int main() {
                     //            .AddDisplay(infoPlotter)
             .AddDisplay(imgDisp);
 
-//    imgDisp.Show(false);
-
     float defaultModelSdfPadding = 0.07;
 
     std::vector<pangolin::Var<float> *> sizeVars;
@@ -264,6 +110,7 @@ int main() {
                   ros::init_options::AnonymousName |
                   ros::init_options::NoRosout);
     }
+
     //ros and rviz related
     ros::NodeHandlePtr nh = ros::NodeHandlePtr(new ros::NodeHandle);
 
@@ -276,8 +123,7 @@ int main() {
     PointCloudRGB::Ptr pointcloud = PointCloudRGB::Ptr(new PointCloudRGB);
     tf::TransformBroadcaster tf_broadcaster;
 
-#ifdef REALSENSE
-    //---- OTHER DEPTH SOURCE --- multiple depth source not supported yet -> change order, first one gets priority
+    //---- DEPTH SOURCE --- multiple depth source not supported yet -> change order, first one gets priority
     DartRealSense<uint16_t,uchar3> *depthSource = new DartRealSense<uint16_t,uchar3>(640, 480);
     tracker.addDepthSource(depthSource);
 
@@ -292,22 +138,7 @@ int main() {
     //visualisation
     //temp buffer to display depth in extra window
     uint16_t *tempDepth = (uint16_t *) malloc(depthSource->getDepthHeight()*depthSource->getDepthWidth() * sizeof(uint16_t));
-#else
-    dart::ImageDepthSource<ushort,uchar3> * depthSource = new dart::ImageDepthSource<ushort,uchar3>();
-    // initialize depth source
-    depthSource->initialize(videoLoc+"/depth",dart::IMAGE_PNG,
-                            make_float2(525/2,525/2),make_float2(160,120),
-                            320,240,0.001,0);
-//                            true,videoLoc+"/color",dart::IMAGE_PNG,320,240);
 
-    tracker.addDepthSource(depthSource);
-    const int depthWidth = depthSource->getDepthWidth();
-    const int depthHeight = depthSource->getDepthHeight();
-
-
-    //temp buffer to display depth in extra window
-    uint16_t *tempDepth = (uint16_t *) malloc(depthSource->getDepthHeight()*depthSource->getDepthWidth() * sizeof(ushort));
-#endif
     // ----
 
     cv::Mat image = cv::Mat();
@@ -322,47 +153,19 @@ int main() {
     pangolin::Var<float> modelSdfPadding("lim.modelSdfPadding",defaultModelSdfPadding,defaultModelSdfPadding/2,defaultModelSdfPadding*2);
 
     dart::ParamMapPoseReduction * handPoseReduction = dart::loadParamMapPoseReduction("src/dartExample/models/spaceJustin/justinHandParamMap.txt");
-    /*
-    tracker.addModel("src/dartExample/models/spaceJustin/spaceJustinHandRight.xml",
-                     modelSdfResolution,
-                     modelSdfPadding,
-                     obsSdfSize,
-                     obsSdfResolution,
-                     make_float3(-0.5*obsSdfSize*obsSdfResolution) + obsSdfOffset, //);
-                     handPoseReduction);
-    */
-    //dart::PosePrior reportedPosePrior(tracker.getPose(0).getReducedDimensions());
-    //memset(reportedPosePrior.getWeights(),0,6*sizeof(float));
 
-    //dart::HostOnlyModel spaceJustin;
-    //dart::readModelXML("src/dartExample/models/spaceJustin/spaceJustinArmsAndHead.xml",spaceJustin);
-
-    //spaceJustin.computeStructure();
 
     dart::LinearPoseReduction * justinPoseReduction = dart::loadLinearPoseReduction("src/dartExample/models/spaceJustin/spaceJustinPoseReduction.txt");
 
-    //dart::Pose spaceJustinPose(justinPoseReduction);
-//    std::cout << spaceJustinPose.getReducedArticulatedDimensions() << " full justin articulated dimensions" << std::endl;
 
-    tracker.addModel(objectModelFile,
+    if(!tracker.addModel( "src/dartExample/models/ikeaMug/ikeaMug.xml",//"src/dart_tracker/models/mug/mug.xml"; //
                      0.5*modelSdfResolution,
                      modelSdfPadding,
-                     64);
-//                     objObsSdfRes,
-//                     objObsSdfOffset);
+                     64)){
+        printf("Failed to load model!\n");
+    }
 
-    /*tracker.addModel("src/dartExample/models/spaceJustin/spaceJustinHandLeft.xml",
-            //"../models/spaceJustinArms.xml",
-            //0.1,
-                     modelSdfResolution,
-                     modelSdfPadding,
-                     obsSdfSize,
-                     obsSdfResolution,
-                     make_float3(-0.5*obsSdfSize*obsSdfResolution) + obsSdfOffset,
-                     handPoseReduction);
-
-*/
-    if(!tracker.addModel("src/dart_tracker/models/xylophone_tiny/xylophone_small.xml" , //roboy_xylophone_left_arm/roboy_xylophone_left_arm.xml",
+    if(!tracker.addModel("src/dart_tracker/models/ikeaMug/ikeaMug.xml", //"xylophone_tiny/xylophone_small.xml" , //roboy_xylophone_left_arm/roboy_xylophone_left_arm.xml",
                      0.5*modelSdfResolution,
                      modelSdfPadding,
                      64))
@@ -398,13 +201,8 @@ int main() {
     static pangolin::Var<float> sigmaPixels("ui.sigmaPixels",3.0,0.01,4);
     static pangolin::Var<float> sigmaDepth("ui.sigmaDepth",0.1,0.001,1);
     static pangolin::Var<float> focalLength("ui.focalLength",depthSource->getFocalLength().x,0.8*depthSource->getFocalLength().x,1.2*depthSource->getFocalLength().x);//475,525); //525.0,450.0,600.0);
-    static pangolin::Var<bool> showCameraPose("ui.showCameraPose",false,true);
     static pangolin::Var<bool> showEstimatedPose("ui.showEstimate",true,true);
-    static pangolin::Var<bool> showReported("ui.showReported",false,true);
 
-    static pangolin::Var<bool> showTablePlane("ui.showTablePlane",false,true);
-
-    static pangolin::Var<bool> showVoxelized("ui.showVoxelized",false,true);
     static pangolin::Var<float> levelSet("ui.levelSet",0.0,-10.0,10.0);
     static pangolin::Var<bool> showTrackedPoints("ui.showPoints",true,true);
     static pangolin::Var<int> pointColoringObs("ui.pointColoringObs",0,0,NumPointColorings-1);
@@ -450,19 +248,7 @@ int main() {
     static pangolin::Var<bool> fitTable("opt.fitTable",true,true);
     static pangolin::Var<bool> subtractTable("opt.subtractTable",true,true);
 
-    static pangolin::Var<bool> * contactVars[10];
-    /*
-    contactVars[0] = new pangolin::Var<bool>("lim.contactThumbR",false,true);
-    contactVars[1] = new pangolin::Var<bool>("lim.contactIndexR",false,true);
-    contactVars[2] = new pangolin::Var<bool>("lim.contactMiddleR",false,true);
-    contactVars[3] = new pangolin::Var<bool>("lim.contactRingR",false,true);
-    contactVars[4] = new pangolin::Var<bool>("lim.contactLittleR",false,true);
-    contactVars[5] = new pangolin::Var<bool>("lim.contactThumbL",false,true);
-    contactVars[6] = new pangolin::Var<bool>("lim.contactIndexL",false,true);
-    contactVars[7] = new pangolin::Var<bool>("lim.contactMiddleL",false,true);
-    contactVars[8] = new pangolin::Var<bool>("lim.contactRingL",false,true);
-    contactVars[9] = new pangolin::Var<bool>("lim.contactLittleL",false,true);*/
-    bool anyContact = false;
+
 
     int fpsWindow = 10;
     pangolin::basetime lastTime = pangolin::TimeNow();
@@ -509,102 +295,18 @@ int main() {
     float3 initialContact = make_float3(0,0.02,0);
 
 
-    std::vector<dart::ContactPrior *> contactPriors;
-    /*
-    // i assume for ikeamug?
-    for (int i=0; i<5; ++i) {
-        dart::ContactPrior * prior = new dart::ContactPrior(0, 1, 3*(1+i), 0, 0.0, initialContact, 100);
-        contactPriors.push_back(prior);
-        tracker.addPrior(prior);
-    }
-    for (int i=0; i<5; ++i) {
-
-        dart::ContactPrior * prior = new dart::ContactPrior(2, 1, 3*(1+i), 0, 0.0, initialContact, 100);
-        contactPriors.push_back(prior);
-        tracker.addPrior(prior);
-    }*/
-
-    // set up potential intersections
-    {
-
-        int * selfIntersectionMatrix = dart::loadSelfIntersectionMatrix("../models/spaceJustin/justinIntersection.txt",tracker.getModel(0).getNumSdfs());
-
-        //tracker.setIntersectionPotentialMatrix(0,selfIntersectionMatrix);
-        //tracker.setIntersectionPotentialMatrix(2,selfIntersectionMatrix);
-
-        delete [] selfIntersectionMatrix;
-
-    }
-
-
-    //dart::MirroredModel & rightHand = tracker.getModel(0);
-    //dart::MirroredModel & leftHand = tracker.getModel(2);
-    dart::MirroredModel & object = tracker.getModel(0);
-    dart::MirroredModel & xylophone = tracker.getModel(1);
-
-    //dart::Pose & rightHandPose = tracker.getPose(0);
-    //dart::Pose & leftHandPose = tracker.getPose(2);
-    dart::Pose & objectPose = tracker.getPose(0);
-    dart::Pose & xylophonePose = tracker.getPose(1);
-#ifndef REALSENSE
-    // set up reported pose offsets
-    std::vector<float *> reportedJointAngles;
-    std::vector<int *> reportedContacts;
-    loadReportedJointAnglesAndContacts(videoLoc+"/reportedJointAngles.txt",videoLoc+"/reportedContacts.txt",
-                                       reportedJointAngles,reportedContacts);
-    std::cout << "loaded " << reportedJointAngles.size() << " frames" << std::endl;
-
-    // -=-=-=-=- set up initial poses -=-=-=-=-
-    //spaceJustinPose.setTransformModelToCamera(initialT_cj);
-    //memcpy(spaceJustinPose.getReducedArticulation(),reportedJointAngles[depthSource->getFrame()],spaceJustinPose.getReducedArticulatedDimensions()*sizeof(float));
-    //spaceJustinPose.projectReducedToFull();
-    //spaceJustin.setPose(spaceJustinPose);
-
-    int framecount = 0;
-#else
-    // -=-=-=-=- set up initial poses -=-=-=-=-
-  /*  spaceJustinPose.setTransformModelToCamera(initialT_cj);
-    spaceJustinPose.projectReducedToFull();
-    spaceJustin.setPose(spaceJustinPose);
-*/
     //enable tracking by default
     trackFromVideo = true;
     //enable color of point cloud using depth cam values
     pointColoringObs = 1;
 
-    //TODO: test area here
+    //Tracking won't start until initial position of objects set
     sliderControlled = true;
-    //end test area
-#endif
 
-/*
-    rightHandPose.setTransformModelToCamera(spaceJustin.getTransformFrameToCamera(rightPalmFrame)*T_wh);
-    memcpy(rightHandPose.getReducedArticulation(),spaceJustinPose.getReducedArticulation() + 7,rightHandPose.getReducedArticulatedDimensions()*sizeof(float));
-    rightHand.setPose(rightHandPose);
 
-    leftHandPose.setTransformModelToCamera(spaceJustin.getTransformFrameToCamera(leftPalmFrame)*T_wh);
-    memcpy(leftHandPose.getReducedArticulation(),spaceJustinPose.getReducedArticulation() + 7 + 15 + 7,leftHandPose.getReducedArticulatedDimensions()*sizeof(float));
-    leftHand.setPose(leftHandPose);
-    const dart::SE3 T_camera_head = spaceJustin.getTransformFrameToCamera(headFrame);
-
-*/
-    objectPose.setTransformModelToCamera(initialT_co);
-    object.setPose(objectPose);
-
-    //xylophonePose.setTransformModelToCamera(initialT_co);
-    //xylophone.setPose(xylophonePose);
-
-    TrackingMode trackingMode = ModeObjOnTable;
-
-   /* if ( isnan(spaceJustinPose.getArticulation()[0])) {
-        std::cerr << "???" << std::endl;
-        spaceJustinPose.projectReducedToFull();
-    }
-*/
     // ------------------- main loop ---------------------
     for (int pangolinFrame=1; !pangolin::ShouldQuit(); ++pangolinFrame) {
 
-#ifdef REALSENSE
         /*REALSENSE STUFF*/
         image.release();
         depthSource->advance();
@@ -634,7 +336,6 @@ int main() {
         cv::imshow("camera", image);
         cv::waitKey(1);
 
-
         //Get and publish point cloud. This can be displayed in RVIZ to see what the camera perceives (depth and color)
         depthSource->generatePointCloud(pointcloud);
         static uint seq = 0;
@@ -645,57 +346,11 @@ int main() {
         pointcloud_msg.header.stamp = ros::Time::now();
         realsense_depth_pub.publish(pointcloud_msg);
         tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
-        //END REALSENSE*/
+        //END REALSENSE
 
-#else
-        image.release();
-        if(depthSource->hasColor() && !SHOWDEPTH){
-            image = cv::Mat(depthSource->getDepthHeight(),depthSource->getDepthWidth(), CV_8UC3, (uint8_t*)depthSource->getColor());
-        }
-        else{
-            memcpy(tempDepth, depthSource->getDepth(), depthSource->getDepthHeight()*depthSource->getDepthWidth() * sizeof(uint16_t));
-            for(int i = 0; i < depthSource->getDepthWidth() * depthSource->getDepthHeight(); i++) {
-                *(tempDepth + i)  *= 100;
-            }
-            image = cv::Mat(depthSource->getDepthHeight(), depthSource->getDepthWidth(),CV_16U, tempDepth);
-        }
-
-        cv::imshow("camera", image);
-        cv::waitKey(1);
-#endif
         if (pangolin::HasResized()) {
             pangolin::DisplayBase().ActivateScissorAndClear();
         }
-
-        static pangolin::Var<std::string> trackingModeStr("ui.mode");
-        trackingModeStr = getTrackingModeString(trackingMode);
-
-
-        /*         right obj left
-         * right    [l   l   0]
-         * obj      [l   1   l]
-         * left     [0   l   l]
-         * */
-
-        /*
-        //values are continuously updated, initial matrix (as defined above, is filled with ones 1)
-        opts.lambdaIntersection[0 + 3*0] = lambdaIntersection; // right (-> 0,0)
-        opts.lambdaIntersection[2 + 3*2] = lambdaIntersection; // left (-> 2,2)
-
-        opts.lambdaIntersection[1 + 3*0] = lambdaIntersection; // object->right
-        opts.lambdaIntersection[0 + 3*1] = lambdaIntersection; // right->object
-
-        opts.lambdaIntersection[1 + 3*2] = lambdaIntersection; // object->left
-        opts.lambdaIntersection[2 + 3*1] = lambdaIntersection; // left->object
-
-*/
-        /* shouldn't be needed?
-        opts.lambdaIntersection[3 + 3*0] = lambdaIntersection; // xylophone -> right
-        opts.lambdaIntersection[0 + 3*3] = lambdaIntersection; // right -> xylophone
-
-        opts.lambdaIntersection[3 + 3*2] = lambdaIntersection; // xylophone -> left
-        opts.lambdaIntersection[2 + 3*3] = lambdaIntersection; // left -> xylophone
-        */
 
 
         opts.focalLength = focalLength;
@@ -708,7 +363,6 @@ int main() {
         opts.regularizationScaled[0] = handRegularization;
         opts.regularizationScaled[1] = objectRegularization;
         opts.regularizationScaled[2] = handRegularization;
-        //opts.regularizationScaled[3] = objectRegularization ;
         opts.planeOffset[2] = planeOffset;
         opts.lambdaObsToMod = lambdaObsToMod;
         opts.lambdaModToObs = lambdaModToObs;
@@ -771,16 +425,14 @@ int main() {
                                                                  dart::SE3Fromse3(dart::se3(0,0,0,*poseVars[m][3],*poseVars[m][4],*poseVars[m][5])));
                     tracker.updatePose(m);
                 }
-            }
-
-            // run optimization method
-            if ((trackFromVideo || iteratePushed) && !sliderControlled) {
-
+            } else {
+                //TRACKING
+                // run optimization method
                 tracker.optimizePoses();
 
                 // update accumulated info
                 for (int m=0; m<tracker.getNumModels(); ++m) {
-                    if (m == 1 && trackingMode == ModeIntermediate) { continue; }
+
                     const Eigen::MatrixXf & JTJ = *tracker.getOptimizer()->getJTJ(m);
                     if (JTJ.rows() == 0) { continue; }
                     //used when calculating new JTJ matrix?
@@ -840,21 +492,6 @@ int main() {
 
         glPushMatrix();
 
-        if (showCameraPose) {
-
-            glColor3f(0,0,0);
-            glPushMatrix();
-
-//            glRotatef(180,0,1,0);
-//            glutSolidCube(0.02);
-
-//            glTranslatef(0,0,-0.02);
-//            glutSolidCone(0.0125,0.02,10,1);
-
-            glPopMatrix();
-
-        }
-
         glColor4ub(0xff,0xff,0xff,0xff);
         if (showEstimatedPose) {
 
@@ -862,68 +499,17 @@ int main() {
 
             glPushMatrix();
 
-            if (showVoxelized) {
-                glColor3f(0.2,0.3,1.0);
-                for (int m=0; m<tracker.getNumModels(); ++m) {
-//                for (int m=1; m<=1; m+=10) {
-                    tracker.updatePose(m);
-                    tracker.getModel(m).renderVoxels(levelSet);
-                }
-            }
-            else{
-                for (int m=0; m<tracker.getNumModels(); ++m) {
-                    tracker.updatePose(m);
-                    tracker.getModel(m).render();
-                }
+            for (int m=0; m<tracker.getNumModels(); ++m) {
+                tracker.updatePose(m);
+                tracker.getModel(m).render();
             }
 
             glPopMatrix();
 
         }
 
-#ifndef  REALSENSE
-        if (showReported) {
-            /*
-            //SHOWS estimated position (reported joint angles)
-            glColor3ub(0xfa,0x85,0x7c);
-            memcpy(spaceJustinPose.getReducedArticulation(),reportedJointAngles[depthSource->getFrame()],spaceJustinPose.getReducedArticulatedDimensions()*sizeof(float));
-            spaceJustinPose.projectReducedToFull();
-            spaceJustin.setPose(spaceJustinPose);
-            spaceJustin.renderWireframe();
-            */
-            // glColor3ub(0,0,0);
-            // glutSolidSphere(0.02,10,10);
-        }
-#endif
-
         glPointSize(1.0f);
 
-        if (showTablePlane) {
-
-            float3 normal = normalize(make_float3(tableNormX,tableNormY,tableNormZ));
-            tableNormX = normal.x;
-            tableNormY = normal.y;
-            tableNormZ = normal.z;
-
-            float3 ipv1 = cross(normal,normal.x == 1 ? make_float3(0,1,0) : make_float3(1,0,0));
-            float3 ipv2 = cross(normal,ipv1);
-
-            float3 pts[4] = { operator+(operator *( 0.5,ipv1),operator *( 0.5,ipv2)),
-                              operator+(operator *( 0.5,ipv1),operator *(-0.5,ipv2)),
-                              operator+(operator *(-0.5,ipv1),operator *(-0.5,ipv2)),
-                              operator+(operator *(-0.5,ipv1),operator *( 0.5,ipv2))};
-
-            glColor3ub(120,100,100);
-            glBegin(GL_QUADS);
-            glNormal3f(-normal.x,-normal.y,-normal.z);
-            for (int i=0; i<4; ++i) {
-                glVertex3f(tableIntercept*normal.x + pts[i].x,
-                           tableIntercept*normal.y + pts[i].y,
-                           tableIntercept*normal.z + pts[i].z);
-            }
-            glEnd();
-
-        }
 
         if (showObsSdf) {
             static pangolin::Var<float> levelSet("ui.levelSet",0,-10,10);
@@ -966,11 +552,8 @@ int main() {
                     break;
                 case PointColoringRGB:
                     glBindBufferARB(GL_ARRAY_BUFFER_ARB,pointCloudColorVbo);
-#ifdef REALSENSE
                     glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),depthSource->getAdjustedColor(),GL_DYNAMIC_DRAW_ARB);
-#else
-                    glBufferDataARB(GL_ARRAY_BUFFER_ARB,depthWidth*depthHeight*sizeof(uchar3),depthSource->getColor(),GL_DYNAMIC_DRAW_ARB);
-#endif
+
                     glColorPointer(3,GL_UNSIGNED_BYTE, 0, 0);
                     glEnableClientState(GL_COLOR_ARRAY);
                     glDisable(GL_LIGHTING);
@@ -1019,30 +602,7 @@ int main() {
 
 
         static pangolin::Var<bool> showFingerContacts("ui.showContacts",true,true);
-        if (showFingerContacts) {
 
-            glPointSize(10.f);
-            glBegin(GL_POINTS);
-            /*
-            for (int i=0; i<contactPriors.size(); ++i) {
-
-                if (*contactVars[i]) {
-
-                    const int model = contactPriors[i]->getSourceModel();
-                    const int sdfNum = contactPriors[i]->getSourceSdfNum();
-                    const int frameNum = tracker.getModel(model).getSdfFrameNumber(sdfNum);
-                    const float3 contactPoint = contactPriors[i]->getContactPoint();
-
-                    float4 contact_c = tracker.getModel(model).getTransformFrameToCamera(frameNum)*make_float4(contactPoint,1);
-
-                    glColor3f(1.0,0,0);
-                    glVertex3fv(&contact_c.x);
-
-                }
-            }*/
-            glEnd();
-
-        }
         if (showPredictedPoints) {
 
             glPointSize(4.0f);
@@ -1240,115 +800,11 @@ int main() {
         if (pangolin::Pushed(stepVideo) || trackFromVideo || pangolinFrame == 1) {
 
             tracker.stepForward();
-#ifndef REALSENSE
-            framecount ++;
-            if(framecount >depthSource->getNumDepthFrames()) {
-                printf("Exceeded demo.\n");
-                goto end;
-            }
-            //START: reported pose as given by their reportedJointAngles file -> for comparison
-            const float * currentReportedPose = reportedJointAngles[depthSource->getFrame()];
-            const float * lastReportedPose = reportedJointAngles[depthSource->getFrame()-1];
-/*
-            memcpy(spaceJustinPose.getReducedArticulation(),lastReportedPose,spaceJustinPose.getReducedArticulatedDimensions()*sizeof(float));
-            spaceJustinPose.projectReducedToFull();
-            spaceJustin.setPose(spaceJustinPose);
-            */
-#endif
-/*
-            dart::SE3 lastT_ro = rightHand.getTransformCameraToModel()*object.getTransformModelToCamera();
-            lastT_ro = dart::SE3Fromse3(dart::se3FromSE3(lastT_ro));
 
-            dart::SE3 lastT_lo = leftHand.getTransformCameraToModel()*object.getTransformModelToCamera();
-            lastT_lo = dart::SE3Fromse3(dart::se3FromSE3(lastT_lo));
-
-            dart::SE3 lastT_head_r = spaceJustin.getTransformModelToFrame(headFrame)*spaceJustin.getTransformFrameToModel(rightPalmFrame)*T_wh;
-            dart::SE3 lastT_head_l = spaceJustin.getTransformModelToFrame(headFrame)*spaceJustin.getTransformFrameToModel(leftPalmFrame)*T_wh;
-
-            // update justin 6DoF transform to keep the camera constant
-            const dart::SE3 T_oldc_base = spaceJustinPose.getTransformModelToCamera();
-            const dart::SE3 T_head_base = spaceJustin.getTransformModelToFrame(headFrame);
-            const dart::SE3 T_newc_base = T_camera_head*T_head_base;
-            spaceJustinPose.setTransformModelToCamera(T_newc_base);
-            spaceJustin.setPose(spaceJustinPose);
-            dart::SE3 T_newc_oldc = T_newc_base*dart::SE3Invert(T_oldc_base);
-
-#ifndef REALSENSE
-
-            memcpy(spaceJustinPose.getReducedArticulation(),currentReportedPose,spaceJustinPose.getReducedArticulatedDimensions()*sizeof(float));
-            spaceJustinPose.projectReducedToFull();
-            spaceJustin.setPose(spaceJustinPose);
-#endif
-
-            dart::SE3 currentT_head_r = spaceJustin.getTransformModelToFrame(headFrame)*spaceJustin.getTransformFrameToModel(rightPalmFrame)*T_wh;
-            dart::SE3 update_r = dart::SE3Invert(dart::SE3Invert(currentT_head_r)*lastT_head_r); // TODO: simplify
-
-            dart::SE3 currentT_head_l = spaceJustin.getTransformModelToFrame(headFrame)*spaceJustin.getTransformFrameToModel(leftPalmFrame)*T_wh;
-            dart::SE3 update_l = dart::SE3Invert(dart::SE3Invert(currentT_head_l)*lastT_head_l); // TODO: simplify
-
-
-            // apply 6DoF deltas
-            rightHandPose.setTransformModelToCamera(rightHand.getTransformModelToCamera()*update_r);
-            rightHand.setPose(rightHandPose);
-
-            leftHandPose.setTransformModelToCamera(leftHand.getTransformModelToCamera()*update_l);
-            leftHand.setPose(leftHandPose);
-
-#ifndef REALSENSE
-            //Update right hand
-            // apply finger joint deltas (works since ptr -> updates val of addr)
-            float * rightHandArticulation = tracker.getPose(0).getReducedArticulation();
-            for (int i=0; i<tracker.getPose(0).getReducedArticulatedDimensions(); ++i) {
-                const int j = 7 + i;
-                float diff = currentReportedPose[j] - lastReportedPose[j];
-                rightHandArticulation[i] += diff;
-            }
-            tracker.updatePose(0);
-            //update lefthand
-            float * leftHandArticulation = tracker.getPose(2).getReducedArticulation();
-            for (int i=0; i<tracker.getPose(2).getReducedArticulatedDimensions(); ++i) {
-                const int j = 7 + 15 + 7 + i;
-                float diff = currentReportedPose[j] - lastReportedPose[j];
-                leftHandArticulation[i] += diff;
-            }
-            tracker.updatePose(2);
-#endif
-            */
-            //END??
-
-            //update obj
-            // apply object 6DoF delta
-            if (trackingMode == ModeObjGrasped) {
-                //objectPose.setTransformModelToCamera(rightHand.getTransformModelToCamera()*lastT_ro);
-                //xylophonePose.setTransformModelToCamera(rightHand.getTransformModelToCamera()*lastT_ro);
-            } else if (trackingMode == ModeObjGraspedLeft) {
-                //objectPose.setTransformModelToCamera(leftHand.getTransformModelToCamera()*lastT_lo);
-                //xylophonePose.setTransformModelToCamera(leftHand.getTransformModelToCamera()*lastT_ro);
-            } else if (trackingMode == ModeObjOnTable){
-                objectPose.setTransformCameraToModel(object.getTransformCameraToModel());// dart::SE3Invert(T_newc_oldc));
-                xylophonePose.setTransformModelToCamera(xylophone.getTransformModelToCamera());//*dart::SE3Invert(T_newc_oldc));
-            }
-            object.setPose(objectPose);
-            xylophone.setPose(xylophonePose);
-
-#ifndef REALSENSE
-            // update contact vars
-            /*
-            const int * contact = reportedContacts[depthSource->getFrame()];
-            for (int i=0; i<10; ++i) {
-                bool inContact = (contact[i] > 0);
-                anyContact |= inContact;
-                *contactVars[i] = inContact;
-                contactPriors[i]->setWeight(inContact ? lambdaContact : 0);
-            }
-             */
-#endif
             // update table based on head movement
             {
                 float4 tableNorm = make_float4(normalize(make_float3(tableNormX,tableNormY,tableNormZ)),0.f);
-                float4 tablePoint = make_float4(make_float3(tableIntercept*tableNorm),1.f); // + make_Float4(0,tableNorm.z,-tableNorm.Y,1.f);
-                //tableNorm = T_newc_oldc*tableNorm;
-                //tablePoint = T_newc_oldc*tablePoint;
+                float4 tablePoint = make_float4(make_float3(tableIntercept*tableNorm),1.f);
                 tableNormX = tableNorm.x;
                 tableNormY = tableNorm.y;
                 tableNormZ = tableNorm.z;
@@ -1385,58 +841,13 @@ int main() {
 
             float totalPerPointError = optimizer.getErrPerObsPoint(1,0) + optimizer.getErrPerModPoint(1,0);
 
-            switch (trackingMode) {
-                case ModeObjOnTable:
-                    if (anyContact || totalPerPointError > resetInfoThreshold) {
-                        trackingMode = ModeIntermediate;
-                        //TODO: comment out: probably fixates  the mug??
-                        tracker.getDampingMatrix(1) = Eigen::MatrixXf::Zero(6,6);
-                        //tracker.getDampingMatrix(3) = Eigen::MatrixXf::Zero(6,6);
-                    }
-                    break;
-                case ModeIntermediate:
-                    /*
-                    if (totalPerPointError < stabilityThreshold) {
-                        if (anyContact) {
-                            bool contactRight = false;
-                            for (int i=0; i<5; ++i) { contactRight = contactRight || *contactVars[i]; }
-                            trackingMode = (contactRight ? ModeObjGrasped : ModeObjGraspedLeft);
-                        } else {
-                            trackingMode = ModeObjOnTable;
-                        }
-                    }*/
-                    break;
-                case ModeObjGrasped:
-                case ModeObjGraspedLeft:
-                    if (!anyContact || totalPerPointError > resetInfoThreshold) {
-                        trackingMode = ModeIntermediate;
-                        tracker.getDampingMatrix(1) = Eigen::MatrixXf::Zero(6,6);
-                        //tracker.getDampingMatrix(3) = Eigen::MatrixXf::Zero(6,6);
-
-                    }
-                    break;
-            }
-
-        } else {
-            /*
-            for (int i=0; i<10; ++i) {
-                bool inContact =  *contactVars[i];
-                contactPriors[i]->setWeight(inContact ? lambdaContact : 0);
-            }
-             */
         }
 
         //Publish xylophone pose
-
         dart::SE3 T_cm = tracker.getPose(1).getTransformModelToCamera();
-
-        double test[6];
         geometry_msgs::Pose pose;
-
         geometry_msgs::Point point = geometry_msgs::Point();
-        for (int i=0; i<  tracker.getPose(1).getReducedDimensions(); ++i) {
-            test[i] = (double) tracker.getPose(1).getReducedArticulation()[i];
-        }
+
         point.x = T_cm.r0.w;
         point.y = T_cm.r1.w;
         point.z = T_cm.r2.w;;
@@ -1471,10 +882,6 @@ end:
     for (uint i=0; i<sizeVars.size(); ++i) {
         delete sizeVars[i];
     }
-    /*
-    for (int i=0; i<10; ++i) {
-        delete contactVars[i];
-    }*/
 
     delete depthSource;
 
