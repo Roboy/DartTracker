@@ -1,0 +1,165 @@
+<?xml version="1.0" ?>
+<model version="1">
+	<frame jointName="joint_hip" jointType="rotational" jointMin="-0.2617993877991494" jointMax="0.2617993877991494">
+		<position x="-0.0085830842233506" y="0.009686930156379774" z="-0.31521144293297654" />
+		<orientation x="0" y="0" z="0" />
+		<axis x="-2.3609670781633625e-15" y="-1.1366942706288076e-14" z="-0.9999999999999987" />
+		<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.008583084223350608" ty="-0.008164586655353396" tz="0.39844861642463053" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/torso.obj" />
+		<frame jointName="sphere_axis0" jointType="rotational" jointMin="-3.141592653589793" jointMax="3.141592653589793">
+			<position x="3.9283447250682e-09" y="-1.669784760338633e-07" z="-3.766154485163043e-08" />
+			<orientation x="0" y="0" z="0" />
+			<axis x="0.9986354432836129" y="0.050744296328168334" z="-0.012339684270769953" />
+			<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.29218005222734217" ty="0.0076909234120174945" tz="0.5486137870423161" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/sphere_link1.obj" />
+			<frame jointName="sphere_axis1" jointType="rotational" jointMin="-3.141592653589793" jointMax="3.141592653589793">
+				<position x="-9.872906652219626e-09" y="1.392142950262798e-07" z="-2.5913787808917733e-08" />
+				<orientation x="0" y="0" z="0" />
+				<axis x="-0.05101049431667491" y="0.9984488883025682" z="-0.022310242422111142" />
+				<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.2921800660285933" ty="0.007690617219246413" tz="0.5486137752945589" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/sphere_link2.obj" />
+				<frame jointName="sphere_axis2" jointType="rotational" jointMin="-3.141592653589793" jointMax="3.141592653589793">
+					<position x="-0.1830759701026465" y="-0.009451175058169585" z="-0.00955433462935261" />
+					<orientation x="0" y="0" z="0" />
+					<axis x="0.9986354432836148" y="0.05074429632816839" z="-0.012339684270770136" />
+					<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.47525602631534186" ty="0.01714193037585743" tz="0.5581680840350569" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/upper_arm_left.obj" />
+					<frame jointName="elbow_left" jointType="rotational" jointMin="-1.5707963267948966" jointMax="0.0">
+						<position x="-0.14040782437443405" y="-0.012906136303689307" z="-0.015728471472726754" />
+						<orientation x="0" y="0" z="0" />
+						<axis x="-0.011188426489530806" y="-0.022909252225328334" z="-0.9996749398055218" />
+						<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.7619449353323546" ty="0.031932085134917" tz="0.5426905147675795" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/lower_arm_left.obj" />
+						<frame jointName="left_wrist_0" jointType="rotational" jointMin="-0.5235987755982988" jointMax="0.5235987755982988">
+							<position x="0.001089518641924343" y="-0.0002749282454624114" z="-0.009919060928152632" />
+							<orientation x="0" y="0" z="0" />
+							<axis x="-0.03524123258776669" y="-0.03511757010586418" z="-0.998761639128954" />
+							<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.9091720008258307" ty="0.03899238887857568" tz="0.5393955896338966" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/wrist_1.obj" />
+							<frame jointName="left_wrist_1" jointType="rotational" jointMin="-0.5235987755982988" jointMax="0.5235987755982988">
+								<position x="-0.05108157318899629" y="-0.02109984352751114" z="0.004533344452076236" />
+								<orientation x="0" y="0" z="0" />
+								<axis x="-0.05113033359003288" y="0.9981369478538951" z="-0.03329147512330832" />
+								<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.9626079064429947" ty="0.04271864206551765" tz="0.5360127824561958" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/palm.obj" />
+								<frame jointName="left_palm_ring" jointType="rotational" jointMin="-1.2217304763960306" jointMax="0.3490658503988659">
+									<position x="0.0029845098445355233" y="-0.0069135684011202335" z="0.0002739401592762647" />
+									<orientation x="0" y="0" z="0" />
+									<axis x="0.30770763660983436" y="-0.9512127947894438" z="0.022588258030706132" />
+									<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0068023034187839" ty="0.06303728926734664" tz="0.5355918413333172" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_ring_limb0.obj" />
+									<frame jointName="left_joint0_ring" jointType="rotational" jointMin="-0.3141592653589793" jointMax="0.3141592653589793">
+										<position x="-0.02414878655864385" y="-0.0077414758068169226" z="0.002966067141780826" />
+										<orientation x="0" y="0" z="0" />
+										<axis x="-0.44489424472796496" y="-0.12285256489810209" z="0.8871168797322637" />
+										<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0302931098132073" ty="0.0706307349392685" tz="0.5353916530547788" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_ring_limb1.obj" />
+										<frame jointName="left_joint1_ring" jointType="rotational" jointMin="0.0" jointMax="1.9198621771937625">
+											<position x="-0.01033149614939063" y="-0.009145888621801976" z="-0.0009126379629992698" />
+											<orientation x="0" y="0" z="0" />
+											<axis x="-0.3077076366098354" y="0.9512127947894418" z="-0.02258825803070381" />
+											<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0681116197721756" ty="0.08284105678300478" tz="0.5344000769659298" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_ring_limb2.obj" />
+											<frame jointName="left_joint2_ring" jointType="rotational" jointMin="0.0" jointMax="1.2217304763960306">
+												<position x="-0.006372210742397187" y="-0.006275666569672342" z="-0.0003872308663373758" />
+												<orientation x="0" y="0" z="0" />
+												<axis x="-0.3077076366098354" y="0.9512127947894418" z="-0.02258825803070381" />
+												<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0939321890626381" ty="0.09118259846387071" tz="0.5339315315998833" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_ring_limb3.obj" />
+											</frame>
+										</frame>
+									</frame>
+								</frame>
+								<frame jointName="left_palm_index" jointType="rotational" jointMin="-1.2217304763960306" jointMax="0.3490658503988659">
+									<position x="-0.0008718289965813142" y="-0.007472054955967234" z="0.00042997921963127794" />
+									<orientation x="0" y="0" z="0" />
+									<axis x="-0.20893141716706198" y="-0.977039717421415" z="0.04172593320302535" />
+									<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0087847639965182" ty="0.02434136978806782" tz="0.536882150509613" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_index_limb0.obj" />
+									<frame jointName="left_joint0_index" jointType="rotational" jointMin="-0.3141592653589793" jointMax="0.3141592653589793">
+										<position x="-0.024822926341660577" y="0.005416078004905867" z="0.0025271654789634115" />
+										<orientation x="0" y="0" z="0" />
+										<axis x="-0.45812774884351193" y="0.13548428682698455" z="0.8785004119307918" />
+										<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0329284637238199" ty="0.019187487568333373" tz="0.5371075209870503" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_index_limb1.obj" />
+										<frame jointName="left_joint1_index" jointType="rotational" jointMin="0.0" jointMax="1.9198621771937625">
+											<position x="-0.013506135865283682" y="-0.0027848151630942564" z="-0.0010242827084090322" />
+											<orientation x="0" y="0" z="0" />
+											<axis x="0.2089314171670572" y="0.9770397174214062" z="-0.041725933203023056" />
+											<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0717987851280548" ty="0.010862288046543829" tz="0.5368008284303474" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_index_limb2.obj" />
+											<frame jointName="left_joint2_index" jointType="rotational" jointMin="0.0" jointMax="1.2217304763960306">
+												<position x="-0.008649569076581685" y="-0.002263466151646134" z="-0.0004479437855649593" />
+												<orientation x="0" y="0" z="0" />
+												<axis x="0.2089314171670572" y="0.9770397174214062" z="-0.041725933203023056" />
+												<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0983373525120592" ty="0.005187182235922041" tz="0.5367997861225197" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_index_limb3.obj" />
+											</frame>
+										</frame>
+									</frame>
+								</frame>
+								<frame jointName="left_palm_thumb" jointType="rotational" jointMin="-1.2217304763960306" jointMax="0.3490658503988659">
+									<position x="-0.002485196574752848" y="0.0019544794017728176" z="-0.006839225286532766" />
+									<orientation x="0" y="0" z="0" />
+									<axis x="-0.4014681415078008" y="0.3048418781508846" z="-0.8636519904913753" />
+									<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.9601519265689278" ty="0.016403629088279987" tz="0.5192746598138529" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_thumb_limb0.obj" />
+									<frame jointName="left_joint0_thumb" jointType="rotational" jointMin="-0.3141592653589793" jointMax="0.3141592653589793">
+										<position x="-0.01853763543391608" y="0.0031132501029943363" z="0.017277637975535498" />
+										<orientation x="0" y="0" z="0" />
+										<axis x="-0.7600487603644841" y="-0.6370448050736126" z="0.12845154026774852" />
+										<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.9769352302083069" ty="0.011047409885705944" tz="0.502020541101273" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_thumb_limb1.obj" />
+										<frame jointName="left_joint1_thumb" jointType="rotational" jointMin="0.0" jointMax="1.9198621771937625">
+											<position x="-0.010934857400673223" y="0.006444661535780296" z="0.00548695865098118" />
+											<orientation x="0" y="0" z="0" />
+											<axis x="0.5397351066511744" y="-0.508701815653092" z="0.6707521728623019" />
+											<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.00413055634803" ty="0.00312432180084319" tz="0.4741280799251096" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_thumb_limb2.obj" />
+											<frame jointName="left_joint2_thumb" jointType="rotational" jointMin="0.0" jointMax="1.2217304763960306">
+												<position x="-0.007285905993485216" y="0.0041923226173764035" z="0.0030788528559568106" />
+												<orientation x="0" y="0" z="0" />
+												<axis x="0.5397351066511744" y="-0.508701815653092" z="0.6707521728623019" />
+												<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0225933864067416" ty="-0.002459206566184596" tz="0.4550370013320713" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_thumb_limb3.obj" />
+											</frame>
+										</frame>
+									</frame>
+								</frame>
+								<frame jointName="left_palm_little" jointType="rotational" jointMin="-1.2217304763960306" jointMax="0.3490658503988659">
+									<position x="0.004662125966214745" y="-0.005913945715452833" z="0.00024123091023497522" />
+									<orientation x="0" y="0" z="0" />
+									<axis x="-0.5433151727055905" y="0.8394650617135525" z="-0.010345688482170427" />
+									<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="0.9915711969253908" ty="0.07686495045419905" tz="0.5355814407224877" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_little_limb0.obj" />
+									<frame jointName="left_joint0_little" jointType="rotational" jointMin="-0.3141592653589793" jointMax="0.3141592653589793">
+										<position x="-0.021427230484583646" y="-0.01385752647978344" z="0.0008558552284917198" />
+										<orientation x="0" y="0" z="0" />
+										<axis x="-0.45224157248391117" y="-0.28227111439747177" z="0.846049985576561" />
+										<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0122289648634446" ty="0.09025770583818864" tz="0.537427373697344" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_little_limb1.obj" />
+										<frame jointName="left_joint1_little" jointType="rotational" jointMin="0.0" jointMax="1.9198621771937625">
+											<position x="-0.007507021424269454" y="-0.011435391445259561" z="-0.002024061418119487" />
+											<orientation x="0" y="0" z="0" />
+											<axis x="-0.5433151727055808" y="0.8394650617135488" z="-0.010345688482164859" />
+											<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0455331837456125" ty="0.1118410793619053" tz="0.5397309632883072" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_little_limb2.obj" />
+											<frame jointName="left_joint2_little" jointType="rotational" jointMin="0.0" jointMax="1.2217304763960306">
+												<position x="-0.00447547275820682" y="-0.007675022430986473" z="-0.0010968746131286623" />
+												<orientation x="0" y="0" z="0" />
+												<axis x="-0.5433151727055808" y="0.8394650617135488" z="-0.010345688482164859" />
+												<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.068257178664381" ty="0.1265703329635954" tz="0.5415116271497218" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_little_limb3.obj" />
+											</frame>
+										</frame>
+									</frame>
+								</frame>
+								<frame jointName="left_palm_middle" jointType="rotational" jointMin="-1.2217304763960306" jointMax="0.3490658503988659">
+									<position x="0.00045429625471399504" y="0.005029961949323401" z="-5.666473076459511e-05" />
+									<orientation x="0" y="0" z="0" />
+									<axis x="0.0511303335900308" y="-0.9981369478539025" z="0.03329147512330995" />
+									<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0129745214747214" ty="0.044448733671160916" tz="0.5360275848363489" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_middle_limb0.obj" />
+									<frame jointName="left_joint0_middle" jointType="rotational" jointMin="-0.6108652381980153" jointMax="0.6108652381980153">
+										<position x="-0.025351911811128787" y="-0.001205994792384324" z="0.0027786958893833715" />
+										<orientation x="0" y="0" z="0" />
+										<axis x="-0.46851520223096466" y="0.005465816247071535" z="0.8834385265151331" />
+										<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0376308356018205" ty="0.04571040312233961" tz="0.5360089971713634" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_middle_limb1.obj" />
+										<frame jointName="left_joint1_middle" jointType="rotational" jointMin="0.0" jointMax="1.9198621771937625">
+											<position x="-0.012337280981169272" y="-0.006173808785695067" z="-0.0009463652735077943" />
+											<orientation x="0" y="0" z="0" />
+											<axis x="-0.05113033359003014" y="0.998136947853893" z="-0.03329147512330968" />
+											<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.0773269357506658" ty="0.04772053368701771" tz="0.5353097915107364" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_middle_limb2.obj" />
+											<frame jointName="left_joint2_middle" jointType="rotational" jointMin="0.0" jointMax="1.2217304763960306">
+												<position x="-0.007774817918590031" y="-0.004419151198931415" z="-0.00040301352353679933" />
+												<orientation x="0" y="0" z="0" />
+												<axis x="-0.05113033359003014" y="0.998136947853893" z="-0.03329147512330968" />
+												<geom type="mesh" sx="0.001" sy="0.001" sz="0.001" tx="1.1044291123310337" ty="0.049099873019318514" tz="0.5350408202558525" rx="0.0" ry="-0.0" rz="0.0" red="220" blue="220" green = "220" meshFile="meshes/left_middle_limb3.obj" />
+											</frame>
+										</frame>
+									</frame>
+								</frame>
+							</frame>
+						</frame>
+					</frame>
+				</frame>
+			</frame>
+		</frame>
+	</frame>
+</model>

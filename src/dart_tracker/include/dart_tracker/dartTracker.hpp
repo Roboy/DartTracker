@@ -24,8 +24,6 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
-#include <Eigen/Dense>
-
 #include <cuda_runtime.h>
 #include <vector_types.h>
 

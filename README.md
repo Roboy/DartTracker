@@ -50,12 +50,12 @@ __Anaconda:__ In case you have anaconda installed, this may cause some libraries
 
 Plug in the camera and execute the following command.
 
-rosrun dart\_tracker roboy\_dart\_tracker
+	rosrun dart_tracker roboy_dart_tracker
 
 ## Current Status
 
-As of now, input of the realsense camera is not properly handled so that no models are detected yet. 
+As of now, either DepthSense or the image source of the Example can be used as a source. Tracking works for objects for which the initial position was set: For the RealSense source, one can set the positions initially by changing the sliders on the right side of window. As soon as position and rotation match more or less, untick the "sliderControl" checkbox and tick the tracking checkbox. For the image source, initial positions should already be defined. The xylophone model can be loaded and tracked. All models are mirrored in the application, this is why the .obj model appears to be wrong. When multiple objects are tracked, it would be preferable for each to be defined with a model of its own, otherwise tracking might suffer.
 
 ## Modifications
 
-In order to work on the project, change the file `DartTracker/src/dart_tracker/src/main.cpp`, where camera input and tracked models are handled. 
+In order to work on the project, change the file `DartTracker/src/dart_tracker/src/extended_demo.cpp`, where camera input and tracked models are handled. 
