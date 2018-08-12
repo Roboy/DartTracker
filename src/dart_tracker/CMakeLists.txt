@@ -76,8 +76,5 @@ qt5_wrap_cpp(MOC_FILES include/dart_tracker/dartTracker.hpp )
 cuda_add_library(  dart_tracker src/dartTracker.cpp ${MOC_FILES} )
 target_link_libraries( dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES} ${OpenCV_LIBRARIES})
 
-cuda_add_executable(  roboy_dart_tracker src/main.cpp )
-target_link_libraries( roboy_dart_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES} ${OpenCV_LIBRARIES})
-
 cuda_add_executable(  extended_demo src/extended_demo.cpp )
 target_link_libraries( extended_demo ${QT_LIBRARIES} ${catkin_LIBRARIES} ${librealsense_LIBRARIES} ${OpenCV_LIBRARIES} ${Pangolin_LIBRARIES})

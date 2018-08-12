@@ -157,19 +157,20 @@ int main() {
 
     dart::LinearPoseReduction * justinPoseReduction = dart::loadLinearPoseReduction("src/dartExample/models/spaceJustin/spaceJustinPoseReduction.txt");
 
-
-    if(!tracker.addModel( "src/dartExample/models/ikeaMug/ikeaMug.xml",//"src/dart_tracker/models/mug/mug.xml"; //
+    //IMPORTANT: Xylophone model must come first, or change getPose(0) further down when publishing xylophone pos
+    if(!tracker.addModel( "src/dart_tracker/models/xylophone/xylophone.xml",//"src/dart_tracker/models/mug/mug.xml"; //
                      0.5*modelSdfResolution,
                      modelSdfPadding,
                      64)){
         printf("Failed to load model!\n");
     }
 
-    if(!tracker.addModel("src/dart_tracker/models/ikeaMug/ikeaMug.xml", //"xylophone_tiny/xylophone_small.xml" , //roboy_xylophone_left_arm/roboy_xylophone_left_arm.xml",
+    /*if(!tracker.addModel("src/dart_tracker/models/ikeaMug/ikeaMug.xml", //"xylophone/xylophone.xml" , //roboy_xylophone_left_arm/roboy_xylophone_left_arm.xml",
                      0.5*modelSdfResolution,
                      modelSdfPadding,
                      64))
         printf("Failed to load model!\n");
+    */
     std::vector<pangolin::Var<float> * *> poseVars;
 
     pangolin::Var<bool> sliderControlled("pose.sliderControl",false,true);
@@ -179,12 +180,13 @@ int main() {
 
         pangolin::Var<float> * * vars = new pangolin::Var<float> *[dimensions];
         poseVars.push_back(vars);
-        poseVars[m][0] = new pangolin::Var<float>(dart::stringFormat("pose.%d x",m),0,-0.5,0.5);
-        poseVars[m][1] = new pangolin::Var<float>(dart::stringFormat("pose.%d y",m),0,-0.5,0.5);
-        poseVars[m][2] = new pangolin::Var<float>(dart::stringFormat("pose.%d z",m),0.3,0.5,1.5);
-        poseVars[m][3] = new pangolin::Var<float>(dart::stringFormat("pose.%d wx",m),    0,-M_PI,M_PI);
-        poseVars[m][4] = new pangolin::Var<float>(dart::stringFormat("pose.%d wy",m),    0,-M_PI,M_PI);
-        poseVars[m][5] = new pangolin::Var<float>(dart::stringFormat("pose.%d wz",m), M_PI,-M_PI,M_PI);
+        string model_name = (tracker.getModel(m).getName()!= "")? string(tracker.getModel(m).getName()) : string("%d",m);
+        poseVars[m][0] = new pangolin::Var<float>(dart::stringFormat("pose.%s x",model_name.c_str()),0,-0.5,0.5);
+        poseVars[m][1] = new pangolin::Var<float>(dart::stringFormat("pose.%s y",model_name.c_str()),0,-0.5,0.5);
+        poseVars[m][2] = new pangolin::Var<float>(dart::stringFormat("pose.%s z",model_name.c_str()),0.3,0.5,1.5);
+        poseVars[m][3] = new pangolin::Var<float>(dart::stringFormat("pose.%s wx",model_name.c_str()),    0,-M_PI,M_PI);
+        poseVars[m][4] = new pangolin::Var<float>(dart::stringFormat("pose.%s wy",model_name.c_str()),    0,-M_PI,M_PI);
+        poseVars[m][5] = new pangolin::Var<float>(dart::stringFormat("pose.%s wz",model_name.c_str()), M_PI,-M_PI,M_PI);
 
         const dart::Pose & pose = tracker.getPose(m);
         for (int i=0; i<pose.getReducedArticulatedDimensions(); ++i) {
@@ -456,7 +458,7 @@ int main() {
                         *poseVars[m][i+6] = tracker.getPose(m).getReducedArticulation()[i];
                     }
                     dart::SE3 T_cm = tracker.getPose(m).getTransformModelToCamera();
-                    // TODO why delete?????
+                    // TODO why set values 0?????
                     *poseVars[m][0] = T_cm.r0.w; T_cm.r0.w = 0;
                     *poseVars[m][1] = T_cm.r1.w; T_cm.r1.w = 0;
                     *poseVars[m][2] = T_cm.r2.w; T_cm.r2.w = 0;
@@ -843,14 +845,20 @@ int main() {
 
         }
 
-        //Publish xylophone pose
-        dart::SE3 T_cm = tracker.getPose(1).getTransformModelToCamera();
+        /// Publish xylophone pose
+        dart::SE3 T_cm = tracker.getPose(0).getTransformModelToCamera();
         geometry_msgs::Pose pose;
         geometry_msgs::Point point = geometry_msgs::Point();
 
+        //get position values (scale in meters?)
         point.x = T_cm.r0.w;
         point.y = T_cm.r1.w;
-        point.z = T_cm.r2.w;;
+        point.z = T_cm.r2.w;
+
+        // todo : is this needed? does this change angles?
+        T_cm.r0.w = 0;
+        T_cm.r1.w = 0;
+        T_cm.r2.w = 0;
 
         geometry_msgs::Quaternion quat = geometry_msgs::Quaternion();
         dart::se3 t_cm = dart::se3FromSE3(T_cm);
