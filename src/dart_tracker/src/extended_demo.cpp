@@ -121,7 +121,10 @@ int main() {
     spinner->start();
 
     PointCloudRGB::Ptr pointcloud = PointCloudRGB::Ptr(new PointCloudRGB);
+
+    //publishing stuff
     tf::TransformBroadcaster tf_broadcaster;
+    tf::Transform realsense_tf;
 
     //---- DEPTH SOURCE --- multiple depth source not supported yet -> change order, first one gets priority
     DartRealSense<uint16_t,uchar3> *depthSource = new DartRealSense<uint16_t,uchar3>(640, 480);
@@ -129,11 +132,6 @@ int main() {
 
     const int depthWidth = depthSource->getDepthWidth();
     const int depthHeight = depthSource->getDepthHeight();
-    tf::Transform realsense_tf;
-    realsense_tf.setOrigin(tf::Vector3(0, 0, 2.0));
-    tf::Quaternion quat;
-    quat.setRPY(M_PI / 2, 0, 0);
-    realsense_tf.setRotation(quat);
 
     //visualisation
     //temp buffer to display depth in extra window
@@ -347,7 +345,6 @@ int main() {
         pointcloud_msg.header.seq = seq++;
         pointcloud_msg.header.stamp = ros::Time::now();
         realsense_depth_pub.publish(pointcloud_msg);
-        tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
         //END REALSENSE
 
         if (pangolin::HasResized()) {
@@ -873,6 +870,13 @@ int main() {
         pose.position = point;
         pose.orientation = quat;
         xylophone_pub.publish(pose);
+
+        // set realsense pose
+        realsense_tf.setOrigin(tf::Vector3(point.x, point.y, point.z));
+        tf::Quaternion quat;
+        quat.setRPY(t_cm.p[3],t_cm.p[4],t_cm.p[5]);
+        realsense_tf.setRotation(quat);
+        tf_broadcaster.sendTransform(tf::StampedTransform(realsense_tf, ros::Time::now(), "world", "real_sense"));
 
     }
 end:
