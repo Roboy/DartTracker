@@ -55,7 +55,7 @@ Some models might not appear since the scale is too small or big. Tip: When work
 __Coordinate System:__
 As far as known: x goes to the right on the horizontal axis, y goes up on the vertical axis and z points away from the camera into the scene. 
 
-## Run the Application
+## Run the Application (for RealSense)
 
 Plug in the camera and execute the following command.
 
@@ -74,7 +74,8 @@ Alternatively, from the DartTracker/ folder, run the following command to work w
 		- For further changes, check it again, move, and uncheck when finished. During that time, no tracking calculations take place which would otherwise overwrite the new position. 
 - When multiple objects are tracked, it is be preferable for each to be defined with a model of its own, otherwise tracking might suffer.
 - The pose of the xylophone is published on a ROS node using a geometry::Pose message.
+- **ZEDm**: The initial implementation of the ZEDm Camera could not be tested, as the camera itself cannot be detected on our system so far. It appears to be a compatibility issue of kernel, Cuda, ZED SDK and ZED camera firmware version. A rosnode for the ZED can also be started if the camera can be detected. 
 
 ## Modifications
 
-In order to work on the project, change the file `DartTracker/src/dart_tracker/src/extended_demo.cpp`, where camera input and tracked models are handled. 
+In order to work on the project, change the file `DartTracker/src/dart_tracker/src/extended_demo.cpp`, or the ZEDm_demo, where camera input and tracked models are handled. 
