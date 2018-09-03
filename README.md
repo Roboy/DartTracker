@@ -8,6 +8,7 @@ This repository contains the DartTracker, a project making use of [DART](https:/
 2. Install [CUDA 8.0](https://developer.nvidia.com/cuda-80-ga2-download-archive). __IMPORTANT__: Use the .run files and follow their instructions. **Do not** install the driver, solely the toolkit. Examples are needed since the dartExample makes use of some files there. 
 __IMPORTANT__: Delete `/usr/local/cuda-8.0/samples/common/inc/GL/glew.h` and/or `/usr/local/cuda/samples/common/inc/GL/glew.h`, another library provides the same file with more functionalities, this one causes `catkin_make`to fail. Note: after this, the CUDA example will no longer work. Then, update your paths: 
 
+#
 	export PATH="$PATH:/usr/local/cuda-8.0"
 	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/cuda-8.0/lib64"
 
@@ -16,8 +17,9 @@ __IMPORTANT__: Delete `/usr/local/cuda-8.0/samples/common/inc/GL/glew.h` and/or 
 
 5. Follow the implementations of the [original dart repository](https://github.com/ori-drs/dart). Since *for now* we a still making use of Pangolin, also install this feature. 
 
-6. To build this repository, further packages are needed. (Some of these might already be installed, some might be missing. Try to find the packages themselves or a ros-kinetic-* version in case any build errors occur due to missing libraries)
+6. To build this repository, further packages are needed. Install the following. (Some of these might already be installed, some might be missing. Try to find the packages themselves or a ros-kinetic-* version in case any build errors occur due to missing libraries)
 
+# 
 	sudo apt install libmatheval-dev
 	sudo apt install ros-kinetic-pcl-ros
 	sudo apt install ros-kinetic-qt-ros
@@ -50,7 +52,11 @@ __Models:__
 All models appear mirrored in the application for some unknown reason, this is why all models are initially mirrored to later appear correctly again.
 
 __Scale:__
-Some models might not appear since the scale is too small or big. Tip: When working with a model, simply import the Ikea mug into the scene as well as a reference for the appropriate size and scale or apply a scale later on in the .xml file or when exporting the model. The application scale of the DartTracker application is in meters.
+Some models might not appear since the scale is too small or big. Tip: When working with a model, simply import the Ikea mug into the scene as a reference for the appropriate size and scale and/or: 
+- Apply a scale later on in the .xml file 
+- Apply a scale when exporting the model using one of our [scripts](https://github.com/Roboy/common_utilities/tree/develop/python)
+
+The application scale of the DartTracker application is in meters.
 
 __Coordinate System:__
 As far as known: x goes to the right on the horizontal axis, y goes up on the vertical axis and z points away from the camera into the scene. 
@@ -68,14 +74,15 @@ Alternatively, from the DartTracker/ folder, run the following command to work w
 ## Current Status
 
 - The extended_demo uses the RealSense camera is used as a depth source.
-- Tracking works for objects for which the initial position was set: 
-		- One can set the positions by moving the sliders on the right side of the application window
-		- As soon as position **and** rotation roughly match, untick the `sliderControl` checkbox. 
+- Tracking works for objects for which the initial position was set:  
+		- One can set the positions by moving the sliders on the right side of the application window  
+		- As soon as position **and** rotation roughly match, untick the `sliderControl` checkbox.   
 		- For further changes, check it again, move, and uncheck when finished. During that time, no tracking calculations take place which would otherwise overwrite the new position. 
+		
 - When multiple objects are tracked, it is be preferable for each to be defined with a model of its own, otherwise tracking might suffer.
 - The pose of the xylophone is published on a ROS node using a geometry::Pose message.
 - **ZEDm**: The initial implementation of the ZEDm Camera could not be tested, as the camera itself cannot be detected on our system so far. It appears to be a compatibility issue of kernel, Cuda, ZED SDK and ZED camera firmware version. A rosnode for the ZED can also be started if the camera can be detected. 
 
 ## Modifications
 
-In order to work on the project, change the file `DartTracker/src/dart_tracker/src/extended_demo.cpp`, or the ZEDm_demo, where camera input and tracked models are handled. 
+In order to work on the project, change the file `DartTracker/src/dart_tracker/src/extended_demo.cpp`, or the `ZEDm_demo`, where camera input and tracked models are handled. 
